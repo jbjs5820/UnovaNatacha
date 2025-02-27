@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestor de Trabalhos Académicos PhD</title>
+  
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- React, ReactDOM via CDN (versões de desenvolvimento) -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  
+  <!-- Bibliotecas adicionais -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/docx/7.8.2/docx.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  
+  <!-- Babel para JSX -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body class="bg-gray-50 min-h-screen">
+  <div id="app-root"></div>
+  
+  <!-- Importar componentes -->
+  <script src="js/utils/loadEnv.js"></script>
+  <script src="js/utils/envConfig.js"></script>
+  <script src="js/utils/geminiApi.js"></script>
+  <script type="text/babel" src="js/utils/models.js"></script>
+  <script type="text/babel" src="js/components/TasksView.js"></script>
+  <script type="text/babel" src="js/components/ProjectsView.js"></script>
+  <script type="text/babel" src="js/components/ResourcesView.js"></script>
+  <script type="text/babel" src="js/components/ai/PaperSearchTab.js"></script>
+  <script type="text/babel" src="js/components/ai/ContentGenerationTab.js"></script>
+  <script type="text/babel" src="js/components/ai/TextAnalysisTab.js"></script>
+  <script type="text/babel" src="js/components/ai/AIAssistantView.js"></script>
+  <script type="text/babel" src="js/components/ExportView.js"></script>
+  <script type="text/babel" src="js/components/SettingsView.js"></script>
+  <script type="text/babel" src="js/components/HelpView.js"></script>
+  
+  <script type="text/babel" data-presets="react,env">
+    // Initialize jsPDF
+    const { jsPDF } = window.jspdf;
+    
+    // Main App Component
+    const App = () => {
+      // Inicializar variáveis de ambiente
+      React.useEffect(() => {
+        EnvConfig.initFromEnvFile().then(() => {
+          console.log('Variáveis de ambiente inicializadas');
+        });
+      }, []);
+      
+      const [activeTab, setActiveTab] = React.useState('tasks');
+      const [tasks, setTasks] = React.useState(() => {
+        const savedTasks = localStorage.getItem('phd-tasks');
+        return savedTasks ? JSON.parse(savedTasks) : defaultTasks;
+      });
+      
+      const [projects, setProjects] = React.useState(() => {
+        const savedProjects = localStorage.getItem('phd-projects');
+        return savedProjects ? JSON.parse(savedProjects) : defaultProjects;
+      });
+      
+      const [resources, setResources] = React.useState(() => {
+        const savedResources = localStorage.getItem('phd-resources');
+        return savedResources ? JSON.parse(savedResources) : defaultResources;
+      });
+      
+      // Configurações da aplicação
+      const [settings, setSettings] = React.useState(() => {
+        const savedSettings = localStorage.getItem('phd-settings');
+        return savedSettings ? JSON.parse(savedSettings) : {
+          language: EnvConfig.DEFAULT_LANGUAGE,
+          theme: EnvConfig.DEFAULT_THEME,
+          googleApiKey: EnvConfig.GEMINI_API_KEY
+        };
+      });
+      
+      // Estado para o modal de ajuda
+      const [showHelpModal, setShowHelpModal] = React.useState(false);
+      
+      // Persistir dados quando alterados
+      React.useEffect(() => {
+        localStorage.setItem('phd-tasks', JSON.stringify(tasks));
+      }, [tasks]);
+      
+      React.useEffect(() => {
+        localStorage.setItem('phd-projects', JSON.stringify(projects));
+      }, [projects]);
+      
+      React.useEffect(() => {
+        localStorage.setItem('phd-resources', JSON.stringify(resources));
+      }, [resources]);
+      
+      React.useEffect(() => {
+        localStorage.setItem('phd-settings', JSON.stringify(settings));
+      }, [settings]);
+      
+      // Aplicar tema
+      React.useEffect(() => {
+        if (settings.theme === 'dark') {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      }, [settings.theme]);
+      
+      return (
+        <div className="container mx-auto px-4 py-8">
+          <header className="flex justify-between items-center mb-8">
+            <h1 className="text-3xl font-bold text-gray-800">Gestor de Trabalhos Académicos PhD</h1>
+            <div className="flex space-x-2">
+              <button 
+                onClick={() => setSettings({...settings, theme: settings.theme === 'light' ? 'dark' : 'light'})}
+                className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded"
+              >
+                {settings.theme === 'light' ? '🌙' : '☀️'}
+              </button>
+              <button 
+                onClick={() => setSettings({...settings, language: settings.language === 'pt-PT' ? 'en-US' : 'pt-PT'})}
+                className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded"
+              >
+                {settings.language === 'pt-PT' ? '🇬🇧' : '🇵🇹'}
+              </button>
+              <button 
+                onClick={() => setShowHelpModal(true)}
+                className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded"
+              >
+                ❓
+              </button>
+            </div>
+          </header>
+          
+          <div className="mb-6">
+            <nav className="flex flex-wrap space-x-1 border-b">
+              <button 
+                onClick={() => setActiveTab('tasks')}
+                className={`py-2 px-4 font-medium ${activeTab === 'tasks' 
+                  ? 'border-b-2 border-blue-500 text-blue-600' 
+                  : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                Tarefas
+              </button>
+              <button 
+                onClick={() => setActiveTab('projects')}
+                className={`py-2 px-4 font-medium ${activeTab === 'projects' 
+                  ? 'border-b-2 border-blue-500 text-blue-600' 
+                  : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                Projetos
+              </button>
+              <button 
+                onClick={() => setActiveTab('resources')}
+                className={`py-2 px-4 font-medium ${activeTab === 'resources' 
+                  ? 'border-b-2 border-blue-500 text-blue-600' 
+                  : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                Recursos
+              </button>
+              <button 
+                onClick={() => setActiveTab('ai')}
+                className={`py-2 px-4 font-medium ${activeTab === 'ai' 
+                  ? 'border-b-2 border-blue-500 text-blue-600' 
+                  : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                Assistente IA
+              </button>
+              <button 
+                onClick={() => setActiveTab('export')}
+                className={`py-2 px-4 font-medium ${activeTab === 'export' 
+                  ? 'border-b-2 border-blue-500 text-blue-600' 
+                  : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                Exportar
+              </button>
+              <button 
+                onClick={() => setActiveTab('settings')}
+                className={`py-2 px-4 font-medium ${activeTab === 'settings' 
+                  ? 'border-b-2 border-blue-500 text-blue-600' 
+                  : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                Configurações
+              </button>
+              <button 
+                onClick={() => setActiveTab('help')}
+                className={`py-2 px-4 font-medium ${activeTab === 'help' 
+                  ? 'border-b-2 border-blue-500 text-blue-600' 
+                  : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                Ajuda
+              </button>
+            </nav>
+          </div>
+          
+          <main>
+            {activeTab === 'tasks' && (
+              <TasksView 
+                tasks={tasks} 
+                setTasks={setTasks} 
+                projects={projects}
+              />
+            )}
+            
+            {activeTab === 'projects' && (
+              <ProjectsView 
+                projects={projects} 
+                setProjects={setProjects} 
+                tasks={tasks}
+                setTasks={setTasks}
+              />
+            )}
+            
+            {activeTab === 'resources' && (
+              <ResourcesView 
+                resources={resources} 
+                setResources={setResources}
+              />
+            )}
+            
+            {activeTab === 'ai' && (
+              <AIAssistantView 
+                resources={resources}
+                setResources={setResources}
+                googleApiKey={settings.googleApiKey}
+              />
+            )}
+            
+            {activeTab === 'export' && (
+              <ExportView 
+                tasks={tasks}
+                projects={projects}
+                resources={resources}
+              />
+            )}
+            
+            {activeTab === 'settings' && (
+              <SettingsView />
+            )}
+            
+            {activeTab === 'help' && (
+              <HelpView />
+            )}
+          </main>
+          
+          {/* Modal de Ajuda Rápida */}
+          {showHelpModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-bold">Ajuda Rápida</h2>
+                  <button 
+                    onClick={() => setShowHelpModal(false)}
+                    className="text-gray-500 hover:text-gray-700 text-2xl"
+                  >
+                    &times;
+                  </button>
+                </div>
+                <div className="space-y-4">
+                  <p>
+                    <strong>Tarefas:</strong> Crie e organize as suas tarefas de investigação.
+                  </p>
+                  <p>
+                    <strong>Projetos:</strong> Agrupe tarefas relacionadas em projetos.
+                  </p>
+                  <p>
+                    <strong>Recursos:</strong> Guarde referências a artigos, livros e outros materiais.
+                  </p>
+                  <p>
+                    <strong>Assistente IA:</strong> Utilize IA para ajudar na sua investigação.
+                  </p>
+                  <p>
+                    <strong>Exportar:</strong> Exporte os seus dados para diferentes formatos.
+                  </p>
+                  <p>
+                    <strong>Configurações:</strong> Personalize a aplicação.
+                  </p>
+                  <p>
+                    <strong>Ajuda:</strong> Documentação detalhada da aplicação.
+                  </p>
+                </div>
+                <div className="mt-6 text-center">
+                  <button
+                    onClick={() => {
+                      setShowHelpModal(false);
+                      setActiveTab('help');
+                    }}
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                  >
+                    Ver Documentação Completa
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <footer className="mt-12 text-center text-gray-500 text-sm">
+            <p> 2025 Gestor de Trabalhos Académicos PhD - Desenvolvido para investigadores</p>
+          </footer>
+        </div>
+      );
+    };
+    
+    // Renderizar a aplicação
+    const root = ReactDOM.createRoot(document.getElementById('app-root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>

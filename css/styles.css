@@ -1,0 +1,98 @@
+/* Estilos personalizados além do Tailwind */
+.task-card {
+  transition: all 0.3s ease;
+}
+
+.task-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.ai-response {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+/* Estilo dos Gráficos */
+.chart-container {
+  height: 300px;
+  position: relative;
+}
+
+/* Barra de Rolagem Personalizada */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Animação de Carregamento */
+.loading-spinner {
+  border: 3px solid rgba(0, 0, 0, 0.1);
+  border-radius: 50%;
+  border-top: 3px solid #3498db;
+  width: 20px;
+  height: 20px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Estilos de Upload de Ficheiros */
+.file-upload-label {
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.file-upload-label:hover {
+  background-color: #e5e7eb;
+}
+
+/* Estilos para conteúdo académico */
+.academic-content {
+  font-family: 'Times New Roman', Times, serif;
+  line-height: 1.6;
+}
+
+.academic-content h1, .academic-content h2, .academic-content h3 {
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+}
+
+.academic-content p {
+  margin-bottom: 1em;
+  text-align: justify;
+}
+
+.academic-content .citation {
+  font-style: italic;
+  color: #444;
+}
+
+.academic-content .reference-list {
+  margin-top: 2em;
+  padding-top: 1em;
+  border-top: 1px solid #ddd;
+}
+
+.paper-editor {
+  min-height: 500px;
+  border: 1px solid #ddd;
+  padding: 1em;
+  margin-bottom: 1em;
+}

@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestor de Trabalhos Académicos PhD - Gestão e Economia</title>
+  
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- docx.js for Word export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/docx/7.8.2/docx.js"></script>
+  
+  <!-- jsPDF for PDF export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  
+  <!-- html2canvas for PDF export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  
+  <!-- PapaParse for CSV handling -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  
+  <!-- React, ReactDOM via CDN -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  
+  <!-- Babel for JSX -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body class="bg-gray-50 min-h-screen">
+  <div id="app-root"></div>
+  
+  <script type="text/babel" data-presets="react,env" data-type="module">
+    // Importar componentes
+    import { createTaskModel, createProjectModel, createResourceModel } from './js/utils/models.js';
+    import TasksView from './js/components/TasksView.js';
+    import ProjectsView from './js/components/ProjectsView.js';
+    import ResourcesView from './js/components/ResourcesView.js';
+    import AIAssistantView from './js/components/ai/AIAssistantView.js';
+    
+    // Initialize jsPDF
+    const { jsPDF } = window.jspdf;
+    
+    // Main App Component
+    const App = () => {
+      const [activeTab, setActiveTab] = React.useState('tasks');
+      const [tasks, setTasks] = React.useState(() => {
+        const savedTasks = localStorage.getItem('phd-group-tasks');
+        return savedTasks ? JSON.parse(savedTasks) : [];
+      });
+      
+      const [projects, setProjects] = React.useState(() => {
+        const savedProjects = localStorage.getItem('phd-group-projects');
+        return savedProjects ? JSON.parse(savedProjects) : [];
+      });
+      
+      const [resources, setResources] = React.useState(() => {
+        const savedResources = localStorage.getItem('phd-group-resources');
+        return savedResources ? JSON.parse(savedResources) : [];
+      });
+      
+      const [settings, setSettings] = React.useState(() => {
+        const savedSettings = localStorage.getItem('phd-group-settings');
+        return savedSettings ? JSON.parse(savedSettings) : {
+          googleApiKey: 'AIzaSyABf0JdJsnKNbo8UbBJMXh9KEAriwTHcME',
+          language: 'pt-PT',
+          theme: 'light',
+          exportFormat: 'docx'
+        };
+      });
+      
+      // Efeito para salvar dados no localStorage
+      React.useEffect(() => {
+        localStorage.setItem('phd-group-tasks', JSON.stringify(tasks));
+      }, [tasks]);
+      
+      React.useEffect(() => {
+        localStorage.setItem('phd-group-projects', JSON.stringify(projects));
+      }, [projects]);
+      
+      React.useEffect(() => {
+        localStorage.setItem('phd-group-resources', JSON.stringify(resources));
+      }, [resources]);
+      
+      React.useEffect(() => {
+        localStorage.setItem('phd-group-settings', JSON.stringify(settings));
+      }, [settings]);
+      
+      // Renderizar o conteúdo com base na aba ativa
+      const renderContent = () => {
+        switch (activeTab) {
+          case 'tasks':
+            return <TasksView tasks={tasks} setTasks={setTasks} />;
+          case 'projects':
+            return <ProjectsView projects={projects} setProjects={setProjects} />;
+          case 'resources':
+            return <ResourcesView resources={resources} setResources={setResources} />;
+          case 'ai':
+            return <AIAssistantView resources={resources} setResources={setResources} googleApiKey={settings.googleApiKey} />;
+          case 'settings':
+            return renderSettings();
+          default:
+            return <TasksView tasks={tasks} setTasks={setTasks} />;
+        }
+      };
+      
+      // Renderizar as configurações
+      const renderSettings = () => (
+        <div className="space-y-6">
+          <h2 className="text-xl font-bold text-gray-800">Configurações</h2>
+          
+          <div className="bg-white rounded-lg shadow p-6">
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              alert('Configurações guardadas com sucesso!');
+            }}>
+              <div className="mb-4">
+                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="googleApiKey">
+                  Chave API Google (para pesquisa de artigos)
+                </label>
+                <input
+                  type="text"
+                  id="googleApiKey"
+                  value={settings.googleApiKey}
+                  onChange={(e) => setSettings({...settings, googleApiKey: e.target.value})}
+                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                />
+              </div>
+              
+              <div className="mb-4">
+                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="language">
+                  Idioma
+                </label>
+                <select
+                  id="language"
+                  value={settings.language}
+                  onChange={(e) => setSettings({...settings, language: e.target.value})}
+                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                >
+                  <option value="pt-PT">Português (Portugal)</option>
+                  <option value="en-US">English (US)</option>
+                </select>
+              </div>
+              
+              <div className="mb-4">
+                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="theme">
+                  Tema
+                </label>
+                <select
+                  id="theme"
+                  value={settings.theme}
+                  onChange={(e) => setSettings({...settings, theme: e.target.value})}
+                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                >
+                  <option value="light">Claro</option>
+                  <option value="dark">Escuro</option>
+                </select>
+              </div>
+              
+              <div className="mb-4">
+                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="exportFormat">
+                  Formato de Exportação Padrão
+                </label>
+                <select
+                  id="exportFormat"
+                  value={settings.exportFormat}
+                  onChange={(e) => setSettings({...settings, exportFormat: e.target.value})}
+                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                >
+                  <option value="docx">Microsoft Word (.docx)</option>
+                  <option value="pdf">PDF</option>
+                  <option value="csv">CSV</option>
+                </select>
+              </div>
+              
+              <button
+                type="submit"
+                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-200"
+              >
+                Guardar Configurações
+              </button>
+            </form>
+          </div>
+        </div>
+      );
+      
+      return (
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex items-center justify-between mb-8">
+            <h1 className="text-3xl font-bold text-gray-800">Gestor de Trabalhos Académicos PhD - Gestão e Economia</h1>
+            <div className="space-x-2">
+              <button
+                onClick={() => document.getElementById('helpModal').classList.remove('hidden')}
+                className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-200"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                </svg>
+              </button>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow mb-8">
+            <nav className="flex">
+              <button
+                onClick={() => setActiveTab('tasks')}
+                className={`px-4 py-4 text-sm font-medium ${activeTab === 'tasks' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                Tarefas
+              </button>
+              <button
+                onClick={() => setActiveTab('projects')}
+                className={`px-4 py-4 text-sm font-medium ${activeTab === 'projects' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                Projetos
+              </button>
+              <button
+                onClick={() => setActiveTab('resources')}
+                className={`px-4 py-4 text-sm font-medium ${activeTab === 'resources' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                Recursos
+              </button>
+              <button
+                onClick={() => setActiveTab('ai')}
+                className={`px-4 py-4 text-sm font-medium ${activeTab === 'ai' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                Assistente IA
+              </button>
+              <button
+                onClick={() => setActiveTab('settings')}
+                className={`px-4 py-4 text-sm font-medium ${activeTab === 'settings' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                Configurações
+              </button>
+            </nav>
+          </div>
+          
+          <div className="mb-8">
+            {renderContent()}
+          </div>
+          
+          {/* Modal de Ajuda */}
+          <div id="helpModal" className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+            <div className="bg-white rounded-lg p-6 max-w-2xl w-full">
+              <div className="flex justify-between items-start mb-4">
+                <h2 className="text-xl font-bold">Ajuda & Documentação</h2>
+                <button
+                  onClick={() => document.getElementById('helpModal').classList.add('hidden')}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              <div className="prose max-w-none">
+                <h3>Bem-vindo ao Gestor de Trabalhos Académicos PhD</h3>
+                <p>Esta aplicação foi desenvolvida para ajudar investigadores de doutoramento a gerir os seus projetos de pesquisa, tarefas, e recursos académicos.</p>
+                
+                <h4>Funcionalidades Principais:</h4>
+                <ul>
+                  <li><strong>Tarefas:</strong> Crie e acompanhe tarefas relacionadas aos seus projetos de pesquisa.</li>
+                  <li><strong>Projetos:</strong> Organize o seu trabalho em projetos com prazos e membros da equipa.</li>
+                  <li><strong>Recursos:</strong> Guarde referências a artigos, livros e outros recursos académicos.</li>
+                  <li><strong>Assistente IA:</strong> Utilize ferramentas de IA para pesquisar artigos, gerar conteúdo e analisar textos.</li>
+                </ul>
+                
+                <h4>Dicas de Utilização:</h4>
+                <ul>
+                  <li>Utilize categorias e prioridades para organizar melhor as suas tarefas.</li>
+                  <li>Atualize regularmente o progresso dos seus projetos.</li>
+                  <li>Aproveite o assistente de IA para acelerar a sua pesquisa e escrita.</li>
+                  <li>Exporte os seus dados regularmente para backup.</li>
+                </ul>
+                
+                <p>Para mais informações ou suporte, contacte a equipa de desenvolvimento.</p>
+              </div>
+            </div>
+          </div>
+          
+          <footer className="text-center text-gray-500 text-sm mt-8">
+            <p>Gestor de Trabalhos Académicos PhD - Gestão e Economia</p>
+            <p>&copy; {new Date().getFullYear()}</p>
+          </footer>
+        </div>
+      );
+    };
+    
+    // Render the app
+    const root = ReactDOM.createRoot(document.getElementById('app-root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
