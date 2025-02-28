@@ -18,7 +18,19 @@ function PaperSearchTab({ resources, setResources, googleApiKey }) {
       const model = ModelUtils.getModelFromStorage();
       
       // Usar o utilitário GeminiAPI para pesquisar artigos
-      const results = await GeminiAPI.searchAcademicPapers(apiKey, searchQuery, { model });
+      const results = await GeminiAPI.searchAcademicPapers(
+        apiKey, 
+        searchQuery, 
+        { 
+          model,
+          interactionType: 'paper_search',
+          metadata: { 
+            query: searchQuery,
+            queryLength: searchQuery.length,
+            searchTime: new Date().toISOString() 
+          }
+        }
+      );
       
       // Processar e formatar os resultados
       const processedResults = results.map(item => ({

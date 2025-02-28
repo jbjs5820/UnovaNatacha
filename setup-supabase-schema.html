@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Supabase Schema Setup</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  
+  <!-- Supabase JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <!-- App scripts -->
+  <script src="js/utils/supabaseClient.js"></script>
+  <script src="js/utils/supabaseSchemaSetupCheck.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+  <div class="container mx-auto p-4">
+    <h1 class="text-2xl font-bold mb-4">Supabase Schema Setup</h1>
+    
+    <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4" role="alert">
+      <p class="font-bold">Important Note:</p>
+      <p>Due to permission restrictions, you need to run the SQL commands directly in the Supabase SQL Editor.</p>
+      <p>Please copy the SQL from <code>supabase/create_schema.sql</code> and run it in your Supabase dashboard.</p>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+      <h2 class="text-xl font-semibold mb-4">Supabase Connection</h2>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label for="supabaseUrl" class="block text-sm font-medium text-gray-700 mb-1">
+            Supabase URL
+          </label>
+          <input
+            type="text"
+            id="supabaseUrl"
+            placeholder="https://your-project.supabase.co"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+          >
+        </div>
+        
+        <div>
+          <label for="supabaseKey" class="block text-sm font-medium text-gray-700 mb-1">
+            Supabase Anon Key
+          </label>
+          <input
+            type="password"
+            id="supabaseKey"
+            placeholder="your-anon-key"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+          >
+        </div>
+      </div>
+      
+      <button
+        id="initButton"
+        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+      >
+        Initialize Supabase Client
+      </button>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+      <h2 class="text-xl font-semibold mb-4">Verification</h2>
+      
+      <div class="space-y-4">
+        <div>
+          <h3 class="text-lg font-medium text-gray-900 mb-2">Check Tables</h3>
+          <p class="text-sm text-gray-500 mb-2">
+            Check if tables exist.
+          </p>
+          <button
+            id="checkTablesButton"
+            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            disabled
+          >
+            Check Tables
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow-md p-6">
+      <h2 class="text-xl font-semibold mb-4">Results</h2>
+      
+      <div id="resultContainer" class="bg-gray-100 p-4 rounded-md font-mono text-sm overflow-x-auto max-h-96 overflow-y-auto">
+        <p>Results will appear here...</p>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // DOM Elements
+    const supabaseUrlInput = document.getElementById('supabaseUrl');
+    const supabaseKeyInput = document.getElementById('supabaseKey');
+    const initButton = document.getElementById('initButton');
+    const checkTablesButton = document.getElementById('checkTablesButton');
+    const resultContainer = document.getElementById('resultContainer');
+    
+    // Load saved values if available
+    if (localStorage.getItem('supabaseUrl')) {
+      supabaseUrlInput.value = localStorage.getItem('supabaseUrl');
+    }
+    
+    if (localStorage.getItem('supabaseKey')) {
+      supabaseKeyInput.value = localStorage.getItem('supabaseKey');
+    }
+    
+    // Helper function to display results
+    function displayResult(title, data, isError = false) {
+      const resultHtml = `
+        <div class="${isError ? 'text-red-600' : 'text-green-600'} mb-2 font-bold">${title}</div>
+        <pre class="whitespace-pre-wrap">${typeof data === 'object' ? JSON.stringify(data, null, 2) : data}</pre>
+      `;
+      
+      resultContainer.innerHTML = resultHtml;
+    }
+    
+    // Helper function to append results
+    function appendResult(title, data, isError = false) {
+      const resultHtml = `
+        <div class="${isError ? 'text-red-600' : 'text-green-600'} mb-2 font-bold">${title}</div>
+        <pre class="whitespace-pre-wrap">${typeof data === 'object' ? JSON.stringify(data, null, 2) : data}</pre>
+        <hr class="my-4">
+      `;
+      
+      resultContainer.innerHTML += resultHtml;
+    }
+    
+    // Initialize Supabase client
+    initButton.addEventListener('click', () => {
+      const url = supabaseUrlInput.value.trim();
+      const key = supabaseKeyInput.value.trim();
+      
+      if (!url || !key) {
+        displayResult('Error', 'Supabase URL and key are required', true);
+        return;
+      }
+      
+      try {
+        // Save to localStorage for convenience
+        localStorage.setItem('supabaseUrl', url);
+        localStorage.setItem('supabaseKey', key);
+        
+        // Initialize the client
+        const success = SupabaseClient.init(url, key);
+        
+        if (success) {
+          displayResult('Success', 'Supabase client initialized successfully');
+          
+          // Enable buttons
+          checkTablesButton.disabled = false;
+        } else {
+          displayResult('Error', 'Failed to initialize Supabase client', true);
+        }
+      } catch (error) {
+        displayResult('Error', error.message, true);
+      }
+    });
+    
+    // Check tables
+    checkTablesButton.addEventListener('click', async () => {
+      try {
+        displayResult('Working', 'Checking tables...');
+        
+        const client = SupabaseClient.getClient();
+        const tables = ['projects', 'tasks', 'documents', 'ai_interactions'];
+        const results = {};
+        
+        for (const table of tables) {
+          results[table] = await SupabaseSchemaSetup.tableExists(client, table);
+        }
+        
+        displayResult('Table Check Results', results);
+      } catch (error) {
+        displayResult('Error', error.message, true);
+      }
+    });
+  </script>
+</body>
+</html>

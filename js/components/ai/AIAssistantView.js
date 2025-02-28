@@ -41,6 +41,16 @@ function AIAssistantView({ resources, setResources, googleApiKey }) {
           >
             Análise de Texto
           </button>
+          <button
+            onClick={() => setActiveTab('history')}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'history'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            Histórico de IA
+          </button>
         </nav>
       </div>
       
@@ -49,6 +59,7 @@ function AIAssistantView({ resources, setResources, googleApiKey }) {
         {activeTab === 'search' && <PaperSearchTab resources={resources} setResources={setResources} googleApiKey={googleApiKey} />}
         {activeTab === 'generate' && <ContentGenerationTab />}
         {activeTab === 'analyze' && <TextAnalysisTab />}
+        {activeTab === 'history' && <AIHistoryView />}
       </div>
     </div>
   );

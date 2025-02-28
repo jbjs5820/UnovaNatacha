@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Supabase Connection Test</title>
+  
+  <!-- Supabase Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .container {
+      background-color: #f8f9fa;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #333;
+      margin-top: 0;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    input[type="text"],
+    input[type="password"] {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    button {
+      background-color: #4299e1;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+    button:hover {
+      background-color: #3182ce;
+    }
+    .status {
+      margin-top: 20px;
+      padding: 10px;
+      border-radius: 4px;
+    }
+    .success {
+      background-color: #c6f6d5;
+      color: #2f855a;
+    }
+    .error {
+      background-color: #fed7d7;
+      color: #c53030;
+    }
+    .loading {
+      background-color: #e9f5fd;
+      color: #2b6cb0;
+    }
+    pre {
+      background-color: #f1f5f9;
+      padding: 10px;
+      border-radius: 4px;
+      overflow: auto;
+      max-height: 300px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Supabase Connection Test</h1>
+    
+    <div class="form-group">
+      <label for="supabaseUrl">Supabase URL:</label>
+      <input type="text" id="supabaseUrl" placeholder="https://your-project.supabase.co">
+    </div>
+    
+    <div class="form-group">
+      <label for="supabaseKey">Supabase Anon Key:</label>
+      <input type="password" id="supabaseKey" placeholder="your-anon-key">
+    </div>
+    
+    <div>
+      <button id="initBtn">Initialize Client</button>
+      <button id="testBtn">Test Connection</button>
+      <button id="createTableBtn">Create Table</button>
+      <button id="insertBtn">Insert Test Data</button>
+    </div>
+    
+    <div id="status" class="status" style="display: none;"></div>
+    
+    <h2>Results:</h2>
+    <pre id="results">No results yet</pre>
+  </div>
+  
+  <script>
+    // DOM Elements
+    const supabaseUrlInput = document.getElementById('supabaseUrl');
+    const supabaseKeyInput = document.getElementById('supabaseKey');
+    const initBtn = document.getElementById('initBtn');
+    const testBtn = document.getElementById('testBtn');
+    const createTableBtn = document.getElementById('createTableBtn');
+    const insertBtn = document.getElementById('insertBtn');
+    const statusDiv = document.getElementById('status');
+    const resultsDiv = document.getElementById('results');
+    
+    // Global variables
+    let supabaseClient = null;
+    
+    // Load values from localStorage if available
+    window.addEventListener('DOMContentLoaded', () => {
+      const savedUrl = localStorage.getItem('supabaseUrl');
+      const savedKey = localStorage.getItem('supabaseKey');
+      
+      if (savedUrl) supabaseUrlInput.value = savedUrl;
+      if (savedKey) supabaseKeyInput.value = savedKey;
+    });
+    
+    // Initialize Supabase client
+    initBtn.addEventListener('click', () => {
+      const url = supabaseUrlInput.value.trim();
+      const key = supabaseKeyInput.value.trim();
+      
+      if (!url || !key) {
+        showStatus('Please enter both URL and key', 'error');
+        return;
+      }
+      
+      try {
+        supabaseClient = supabase.createClient(url, key);
+        
+        // Save to localStorage
+        localStorage.setItem('supabaseUrl', url);
+        localStorage.setItem('supabaseKey', key);
+        
+        showStatus('Supabase client initialized', 'success');
+        resultsDiv.textContent = 'Client initialized successfully';
+      } catch (error) {
+        showStatus(`Error initializing client: ${error.message}`, 'error');
+        resultsDiv.textContent = JSON.stringify(error, null, 2);
+      }
+    });
+    
+    // Test connection
+    testBtn.addEventListener('click', async () => {
+      if (!supabaseClient) {
+        showStatus('Please initialize the client first', 'error');
+        return;
+      }
+      
+      showStatus('Testing connection...', 'loading');
+      
+      try {
+        // Simple query to test connection
+        const { data, error, count } = await supabaseClient
+          .from('ai_interactions')
+          .select('*', { count: 'exact' })
+          .limit(5);
+        
+        if (error) {
+          if (error.code === '42P01') {
+            showStatus('Table does not exist. Use "Create Table" to create it.', 'error');
+          } else {
+            showStatus(`Error: ${error.message}`, 'error');
+          }
+          resultsDiv.textContent = JSON.stringify(error, null, 2);
+        } else {
+          showStatus(`Connection successful! Found ${count || 0} records.`, 'success');
+          resultsDiv.textContent = JSON.stringify(data, null, 2);
+        }
+      } catch (error) {
+        showStatus(`Error: ${error.message}`, 'error');
+        resultsDiv.textContent = JSON.stringify(error, null, 2);
+      }
+    });
+    
+    // Create table
+    createTableBtn.addEventListener('click', async () => {
+      if (!supabaseClient) {
+        showStatus('Please initialize the client first', 'error');
+        return;
+      }
+      
+      showStatus('Creating table...', 'loading');
+      
+      try {
+        // SQL to create the table
+        const sql = `
+          CREATE TABLE IF NOT EXISTS ai_interactions (
+            id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+            prompt TEXT NOT NULL,
+            response TEXT NOT NULL,
+            model TEXT,
+            interaction_type TEXT,
+            metadata JSONB,
+            user_id UUID
+          );
+          
+          -- Create index for faster queries
+          CREATE INDEX IF NOT EXISTS ai_interactions_created_at_idx ON ai_interactions (created_at);
+        `;
+        
+        // Try to execute SQL directly (requires admin privileges)
+        const { error } = await supabaseClient.rpc('execute_sql', { sql });
+        
+        if (error) {
+          showStatus(`Error creating table: ${error.message}`, 'error');
+          resultsDiv.textContent = JSON.stringify(error, null, 2);
+          
+          // If the function doesn't exist, show instructions
+          if (error.code === 'PGRST116') {
+            resultsDiv.textContent += '\n\nYou need to create this function in the Supabase SQL Editor:\n\n';
+            resultsDiv.textContent += `
+CREATE OR REPLACE FUNCTION execute_sql(sql TEXT)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  EXECUTE sql;
+END;
+$$;`;
+          }
+        } else {
+          showStatus('Table created successfully!', 'success');
+          resultsDiv.textContent = 'Table ai_interactions created successfully';
+        }
+      } catch (error) {
+        showStatus(`Error: ${error.message}`, 'error');
+        resultsDiv.textContent = JSON.stringify(error, null, 2);
+      }
+    });
+    
+    // Insert test data
+    insertBtn.addEventListener('click', async () => {
+      if (!supabaseClient) {
+        showStatus('Please initialize the client first', 'error');
+        return;
+      }
+      
+      showStatus('Inserting test data...', 'loading');
+      
+      try {
+        const testData = {
+          prompt: 'This is a test prompt',
+          response: 'This is a test response',
+          model: 'gemini-pro',
+          interaction_type: 'test',
+          metadata: { source: 'test-script', timestamp: new Date().toISOString() }
+        };
+        
+        const { data, error } = await supabaseClient
+          .from('ai_interactions')
+          .insert([testData])
+          .select();
+        
+        if (error) {
+          showStatus(`Error inserting data: ${error.message}`, 'error');
+          resultsDiv.textContent = JSON.stringify(error, null, 2);
+        } else {
+          showStatus('Test data inserted successfully!', 'success');
+          resultsDiv.textContent = JSON.stringify(data, null, 2);
+        }
+      } catch (error) {
+        showStatus(`Error: ${error.message}`, 'error');
+        resultsDiv.textContent = JSON.stringify(error, null, 2);
+      }
+    });
+    
+    // Helper function to show status
+    function showStatus(message, type) {
+      statusDiv.textContent = message;
+      statusDiv.className = `status ${type}`;
+      statusDiv.style.display = 'block';
+    }
+  </script>
+</body>
+</html>

@@ -60,7 +60,14 @@ const GeminiAPI = {
           data.candidates[0].content && 
           data.candidates[0].content.parts && 
           data.candidates[0].content.parts.length > 0) {
-        return data.candidates[0].content.parts[0].text;
+        const responseText = data.candidates[0].content.parts[0].text;
+        
+        // Salvar interação no Supabase se inicializado e interactionType está definido
+        if (SupabaseClient.isInitialized() && mergedOptions.interactionType) {
+          this.saveInteraction(prompt, responseText, mergedOptions.model, mergedOptions.interactionType, mergedOptions.metadata);
+        }
+        
+        return responseText;
       } else {
         throw new Error('Formato de resposta inesperado da API Gemini');
       }
@@ -70,10 +77,60 @@ const GeminiAPI = {
     }
   },
 
+  // Função para salvar uma interação na base de dados
+  async saveInteraction(prompt, response, model, type, metadata = {}) {
+    try {
+      // Usar AIUtils para salvar a interação (que vai usar o melhor serviço disponível)
+      if (window.AIUtils) {
+        const result = await AIUtils.storeInteraction(prompt, response, model, type, metadata);
+        if (result.success) {
+          console.log('Interação salva com sucesso via AIUtils.');
+          return result;
+        } else {
+          console.warn('Falha ao salvar interação via AIUtils:', result.error);
+        }
+      }
+      
+      // Fallback para AIInteractionsService
+      if (window.AIInteractionsService) {
+        const result = await AIInteractionsService.storeInteraction(prompt, response, model, type, metadata);
+        if (result.success) {
+          console.log('Interação salva com sucesso via AIInteractionsService.');
+          return result;
+        } else {
+          console.warn('Falha ao salvar interação via AIInteractionsService:', result.error);
+        }
+      }
+      
+      // Fallback para SupabaseClient
+      if (window.SupabaseClient && SupabaseClient.isInitialized()) {
+        await SupabaseClient.storeAIInteraction({
+          prompt,
+          response,
+          model,
+          type,
+          metadata
+        });
+        console.log('Interação salva com sucesso via SupabaseClient.');
+        return { success: true, source: 'supabase' };
+      } else {
+        console.log('Nenhum serviço de armazenamento disponível. Interação não será salva.');
+        return { success: false, error: 'Nenhum serviço de armazenamento disponível' };
+      }
+    } catch (error) {
+      console.error('Erro ao salvar interação:', error);
+      return { success: false, error };
+    }
+  },
+
   // Função para pesquisar artigos acadêmicos usando Gemini
   async searchAcademicPapers(apiKey, query, options = {}) {
     const mergedOptions = { 
-      ...{ model: ModelUtils.getModelFromStorage() }, 
+      ...{ 
+        model: ModelUtils.getModelFromStorage(),
+        interactionType: 'paper_search',
+        metadata: { query }
+      }, 
       ...options 
     };
     
@@ -108,7 +165,9 @@ const GeminiAPI = {
     try {
       const jsonResponse = await this.generateContent(apiKey, prompt, {
         temperature: 0.2, // Menor temperatura para resultados mais precisos
-        model: mergedOptions.model
+        model: mergedOptions.model,
+        interactionType: mergedOptions.interactionType,
+        metadata: mergedOptions.metadata
       });
 
       // Extrair o JSON da resposta
@@ -132,7 +191,11 @@ const GeminiAPI = {
   // Função para analisar texto usando Gemini
   async analyzeText(apiKey, text, analysisType, options = {}) {
     const mergedOptions = { 
-      ...{ model: ModelUtils.getModelFromStorage() }, 
+      ...{ 
+        model: ModelUtils.getModelFromStorage(),
+        interactionType: 'text_analysis',
+        metadata: { analysisType, textLength: text.length }
+      }, 
       ...options 
     };
     
@@ -231,7 +294,9 @@ const GeminiAPI = {
       const jsonResponse = await this.generateContent(apiKey, prompt, {
         temperature: 0.3,
         maxOutputTokens: 1000,
-        model: mergedOptions.model
+        model: mergedOptions.model,
+        interactionType: mergedOptions.interactionType,
+        metadata: mergedOptions.metadata
       });
       
       // Extrair o JSON da resposta
@@ -255,7 +320,11 @@ const GeminiAPI = {
   // Função para gerar conteúdo acadêmico
   async generateAcademicContent(apiKey, prompt, contentType, language = 'pt', options = {}) {
     const mergedOptions = { 
-      ...{ model: ModelUtils.getModelFromStorage() }, 
+      ...{ 
+        model: ModelUtils.getModelFromStorage(),
+        interactionType: 'academic_content',
+        metadata: { contentType, language }
+      }, 
       ...options 
     };
     
@@ -295,7 +364,9 @@ const GeminiAPI = {
       return await this.generateContent(apiKey, fullPrompt, {
         temperature: 0.7,
         maxOutputTokens: 1500,
-        model: mergedOptions.model
+        model: mergedOptions.model,
+        interactionType: mergedOptions.interactionType,
+        metadata: mergedOptions.metadata
       });
     } catch (error) {
       console.error('Erro na geração de conteúdo:', error);

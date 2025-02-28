@@ -5,6 +5,8 @@ const EnvConfig = {
   DEFAULT_MODEL: 'gemini-2.0-flash',
   DEFAULT_LANGUAGE: 'pt-PT',
   DEFAULT_THEME: 'light',
+  SUPABASE_URL: '',
+  SUPABASE_ANON_KEY: '',
   
   // Carregar variáveis de ambiente do .env.local se disponível
   loadEnv: function() {
@@ -17,12 +19,14 @@ const EnvConfig = {
     if (envVars) {
       try {
         const parsedVars = JSON.parse(envVars);
-        this.GEMINI_API_KEY = parsedVars.GEMINI_API_KEY || this.GEMINI_API_KEY;
+        this.GEMINI_API_KEY = parsedVars.GOOGLE_API_KEY || parsedVars.GEMINI_API_KEY || this.GEMINI_API_KEY;
         this.DEFAULT_MODEL = parsedVars.DEFAULT_MODEL || this.DEFAULT_MODEL;
         this.DEFAULT_LANGUAGE = parsedVars.DEFAULT_LANGUAGE || this.DEFAULT_LANGUAGE;
         this.DEFAULT_THEME = parsedVars.DEFAULT_THEME || this.DEFAULT_THEME;
+        this.SUPABASE_URL = parsedVars.NEXT_PUBLIC_SUPABASE_URL || this.SUPABASE_URL;
+        this.SUPABASE_ANON_KEY = parsedVars.NEXT_PUBLIC_SUPABASE_ANON_KEY || this.SUPABASE_ANON_KEY;
       } catch (e) {
-        console.error('Erro ao analisar variáveis de ambiente:', e);
+        console.error('Erro ao analisar variáveis de ambiente do localStorage:', e);
       }
     }
     
@@ -52,10 +56,12 @@ const EnvConfig = {
         localStorage.setItem('env_variables', JSON.stringify(envVars));
         
         // Atualizar as propriedades
-        this.GEMINI_API_KEY = envVars.GEMINI_API_KEY || this.GEMINI_API_KEY;
+        this.GEMINI_API_KEY = envVars.GOOGLE_API_KEY || envVars.GEMINI_API_KEY || this.GEMINI_API_KEY;
         this.DEFAULT_MODEL = envVars.DEFAULT_MODEL || this.DEFAULT_MODEL;
         this.DEFAULT_LANGUAGE = envVars.DEFAULT_LANGUAGE || this.DEFAULT_LANGUAGE;
         this.DEFAULT_THEME = envVars.DEFAULT_THEME || this.DEFAULT_THEME;
+        this.SUPABASE_URL = envVars.NEXT_PUBLIC_SUPABASE_URL || this.SUPABASE_URL;
+        this.SUPABASE_ANON_KEY = envVars.NEXT_PUBLIC_SUPABASE_ANON_KEY || this.SUPABASE_ANON_KEY;
       }
     } catch (e) {
       console.warn('Não foi possível carregar o arquivo .env.local:', e);

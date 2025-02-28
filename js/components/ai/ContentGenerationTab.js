@@ -33,7 +33,15 @@ function ContentGenerationTab() {
         prompt,
         contentType,
         language,
-        { model }
+        { 
+          model,
+          interactionType: 'content_generation',
+          metadata: {
+            contentType,
+            language,
+            promptLength: prompt.length
+          }
+        }
       );
       
       setGeneratedContent(content);

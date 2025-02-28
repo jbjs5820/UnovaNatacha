@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Supabase Table Creation</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  
+  <!-- Supabase JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <!-- App scripts -->
+  <script src="js/utils/supabaseClient.js"></script>
+  <script src="js/utils/supabaseSetup.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+  <div class="container mx-auto px-4 py-8">
+    <h1 class="text-2xl font-bold mb-6">Test Supabase Table Creation</h1>
+    
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+      <h2 class="text-xl font-semibold mb-4">Supabase Connection</h2>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label for="supabaseUrl" class="block text-sm font-medium text-gray-700 mb-1">
+            Supabase URL
+          </label>
+          <input
+            type="text"
+            id="supabaseUrl"
+            placeholder="https://your-project.supabase.co"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+          >
+        </div>
+        
+        <div>
+          <label for="supabaseKey" class="block text-sm font-medium text-gray-700 mb-1">
+            Supabase Anon Key
+          </label>
+          <input
+            type="password"
+            id="supabaseKey"
+            placeholder="your-anon-key"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+          >
+        </div>
+      </div>
+      
+      <button
+        id="initButton"
+        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+      >
+        Initialize Supabase Client
+      </button>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+      <h2 class="text-xl font-semibold mb-4">Table Operations</h2>
+      
+      <div class="flex flex-wrap gap-2 mb-4">
+        <button
+          id="checkTableButton"
+          class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+          disabled
+        >
+          Check If Table Exists
+        </button>
+        
+        <button
+          id="createTableButton"
+          class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+          disabled
+        >
+          Create Table
+        </button>
+        
+        <button
+          id="insertTestDataButton"
+          class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-yellow-600 hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500"
+          disabled
+        >
+          Insert Test Data
+        </button>
+        
+        <button
+          id="queryDataButton"
+          class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          disabled
+        >
+          Query Data
+        </button>
+      </div>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow-md p-6">
+      <h2 class="text-xl font-semibold mb-4">Results</h2>
+      
+      <div id="resultContainer" class="bg-gray-100 p-4 rounded-md font-mono text-sm overflow-x-auto">
+        <p>Results will appear here...</p>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // DOM Elements
+    const supabaseUrlInput = document.getElementById('supabaseUrl');
+    const supabaseKeyInput = document.getElementById('supabaseKey');
+    const initButton = document.getElementById('initButton');
+    const checkTableButton = document.getElementById('checkTableButton');
+    const createTableButton = document.getElementById('createTableButton');
+    const insertTestDataButton = document.getElementById('insertTestDataButton');
+    const queryDataButton = document.getElementById('queryDataButton');
+    const resultContainer = document.getElementById('resultContainer');
+    
+    // Load saved values if available
+    if (localStorage.getItem('supabaseUrl')) {
+      supabaseUrlInput.value = localStorage.getItem('supabaseUrl');
+    }
+    
+    if (localStorage.getItem('supabaseKey')) {
+      supabaseKeyInput.value = localStorage.getItem('supabaseKey');
+    }
+    
+    // Helper function to display results
+    function displayResult(title, data, isError = false) {
+      const resultHtml = `
+        <div class="${isError ? 'text-red-600' : 'text-green-600'} mb-2 font-bold">${title}</div>
+        <pre class="whitespace-pre-wrap">${typeof data === 'object' ? JSON.stringify(data, null, 2) : data}</pre>
+      `;
+      
+      resultContainer.innerHTML = resultHtml;
+    }
+    
+    // Initialize Supabase client
+    initButton.addEventListener('click', () => {
+      const url = supabaseUrlInput.value.trim();
+      const key = supabaseKeyInput.value.trim();
+      
+      if (!url || !key) {
+        displayResult('Error', 'Supabase URL and key are required', true);
+        return;
+      }
+      
+      try {
+        // Save to localStorage for convenience
+        localStorage.setItem('supabaseUrl', url);
+        localStorage.setItem('supabaseKey', key);
+        
+        // Initialize the client
+        const success = SupabaseClient.init(url, key);
+        
+        if (success) {
+          displayResult('Success', 'Supabase client initialized successfully');
+          
+          // Enable buttons
+          checkTableButton.disabled = false;
+          createTableButton.disabled = false;
+          insertTestDataButton.disabled = false;
+          queryDataButton.disabled = false;
+        } else {
+          displayResult('Error', 'Failed to initialize Supabase client', true);
+        }
+      } catch (error) {
+        displayResult('Error', error.message, true);
+      }
+    });
+    
+    // Check if table exists
+    checkTableButton.addEventListener('click', async () => {
+      try {
+        const { data, error } = await SupabaseClient.getClient()
+          .from('ai_interactions')
+          .select('id')
+          .limit(1);
+        
+        if (error) {
+          if (error.code === '42P01') {
+            displayResult('Table Check', 'Table does not exist', true);
+          } else {
+            displayResult('Error', error, true);
+          }
+        } else {
+          displayResult('Table Check', 'Table exists and is accessible');
+        }
+      } catch (error) {
+        displayResult('Error', error.message, true);
+      }
+    });
+    
+    // Create table
+    createTableButton.addEventListener('click', async () => {
+      try {
+        const result = await SupabaseSetup.createAIInteractionsTable(SupabaseClient.getClient());
+        
+        if (result.error) {
+          displayResult('Error Creating Table', result.error, true);
+        } else {
+          displayResult('Table Creation', result);
+        }
+      } catch (error) {
+        displayResult('Error', error.message, true);
+      }
+    });
+    
+    // Insert test data
+    insertTestDataButton.addEventListener('click', async () => {
+      try {
+        const testData = {
+          prompt: 'This is a test prompt',
+          response: 'This is a test response',
+          model: 'test-model',
+          interaction_type: 'test'
+        };
+        
+        const { data, error } = await SupabaseClient.getClient()
+          .from('ai_interactions')
+          .insert(testData)
+          .select();
+        
+        if (error) {
+          displayResult('Error Inserting Data', error, true);
+        } else {
+          displayResult('Data Inserted', data);
+        }
+      } catch (error) {
+        displayResult('Error', error.message, true);
+      }
+    });
+    
+    // Query data
+    queryDataButton.addEventListener('click', async () => {
+      try {
+        const { data, error } = await SupabaseClient.getClient()
+          .from('ai_interactions')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(10);
+        
+        if (error) {
+          displayResult('Error Querying Data', error, true);
+        } else {
+          displayResult('Query Results', data);
+        }
+      } catch (error) {
+        displayResult('Error', error.message, true);
+      }
+    });
+  </script>
+</body>
+</html>

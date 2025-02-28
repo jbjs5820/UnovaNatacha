@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teste de AI Interactions Service</title>
+  
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Supabase Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <!-- Custom CSS -->
+  <style>
+    .code-block {
+      background-color: #f5f5f5;
+      border-radius: 4px;
+      padding: 1rem;
+      font-family: monospace;
+      overflow-x: auto;
+      white-space: pre-wrap;
+    }
+    
+    .success {
+      color: #10b981;
+    }
+    
+    .error {
+      color: #ef4444;
+    }
+    
+    .warning {
+      color: #f59e0b;
+    }
+    
+    .info {
+      color: #3b82f6;
+    }
+  </style>
+</head>
+
+<body class="bg-gray-50 min-h-screen">
+  <div class="container mx-auto px-4 py-8">
+    <header class="mb-8">
+      <h1 class="text-3xl font-bold text-gray-800">Teste de AI Interactions Service</h1>
+      <p class="text-gray-600">Esta página permite testar o serviço de interações de IA com Supabase e localStorage</p>
+    </header>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <!-- Configuração do Supabase -->
+      <div class="bg-white p-6 rounded-lg shadow-md">
+        <h2 class="text-xl font-semibold mb-4">Configuração do Supabase</h2>
+        
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-1">URL do Supabase</label>
+          <input type="text" id="supabaseUrl" class="w-full px-3 py-2 border border-gray-300 rounded-md" 
+                 placeholder="https://your-project.supabase.co">
+        </div>
+        
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Chave Anônima do Supabase</label>
+          <input type="text" id="supabaseKey" class="w-full px-3 py-2 border border-gray-300 rounded-md" 
+                 placeholder="sua-chave-anonima">
+        </div>
+        
+        <div class="flex space-x-2">
+          <button id="initSupabase" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
+            Inicializar Supabase
+          </button>
+          <button id="resetSupabase" class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700">
+            Resetar
+          </button>
+        </div>
+        
+        <div id="supabaseStatus" class="mt-4 p-3 bg-gray-100 rounded-md">
+          Status: Não inicializado
+        </div>
+      </div>
+      
+      <!-- Teste de Interações -->
+      <div class="bg-white p-6 rounded-lg shadow-md">
+        <h2 class="text-xl font-semibold mb-4">Criar Nova Interação</h2>
+        
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Prompt</label>
+          <textarea id="prompt" class="w-full px-3 py-2 border border-gray-300 rounded-md" rows="2"
+                   placeholder="Digite o prompt..."></textarea>
+        </div>
+        
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Resposta</label>
+          <textarea id="response" class="w-full px-3 py-2 border border-gray-300 rounded-md" rows="3"
+                   placeholder="Digite a resposta..."></textarea>
+        </div>
+        
+        <div class="grid grid-cols-2 gap-4 mb-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Modelo</label>
+            <select id="model" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+              <option value="gemini-pro">Gemini Pro</option>
+              <option value="gemini-pro-vision">Gemini Pro Vision</option>
+              <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+              <option value="gpt-4">GPT-4</option>
+            </select>
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
+            <select id="type" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+              <option value="chat">Chat</option>
+              <option value="analysis">Análise</option>
+              <option value="research">Pesquisa</option>
+              <option value="writing">Escrita</option>
+              <option value="coding">Programação</option>
+            </select>
+          </div>
+        </div>
+        
+        <button id="storeInteraction" class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700">
+          Salvar Interação
+        </button>
+      </div>
+      
+      <!-- Gerenciamento de Interações -->
+      <div class="bg-white p-6 rounded-lg shadow-md">
+        <h2 class="text-xl font-semibold mb-4">Gerenciar Interações</h2>
+        
+        <div class="flex space-x-2 mb-4">
+          <button id="getInteractions" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
+            Listar Interações
+          </button>
+          <button id="syncInteractions" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
+            Sincronizar Local
+          </button>
+          <button id="clearLocal" class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700">
+            Limpar Local
+          </button>
+        </div>
+        
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Filtrar por Tipo</label>
+          <select id="filterType" class="w-full px-3 py-2 border border-gray-300 rounded-md">
+            <option value="all">Todos</option>
+            <option value="chat">Chat</option>
+            <option value="analysis">Análise</option>
+            <option value="research">Pesquisa</option>
+            <option value="writing">Escrita</option>
+            <option value="coding">Programação</option>
+          </select>
+        </div>
+        
+        <div id="interactionsList" class="mt-4 max-h-96 overflow-y-auto">
+          <p class="text-gray-500">Clique em "Listar Interações" para ver os dados.</p>
+        </div>
+      </div>
+      
+      <!-- Console de Log -->
+      <div class="bg-white p-6 rounded-lg shadow-md">
+        <h2 class="text-xl font-semibold mb-4">Console de Log</h2>
+        <div id="logConsole" class="code-block h-80 overflow-y-auto">
+          // Logs aparecerão aqui
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Scripts -->
+  <script src="js/utils/supabaseClient.js"></script>
+  <script src="js/utils/aiInteractionsService.js"></script>
+  <script src="js/utils/aiUtils.js"></script>
+  
+  <script>
+    // Função para adicionar log
+    function log(message, type = 'info') {
+      const logConsole = document.getElementById('logConsole');
+      const timestamp = new Date().toLocaleTimeString();
+      const logEntry = document.createElement('div');
+      logEntry.className = type;
+      logEntry.textContent = `[${timestamp}] ${message}`;
+      logConsole.appendChild(logEntry);
+      logConsole.scrollTop = logConsole.scrollHeight;
+    }
+    
+    // Inicializar a página
+    document.addEventListener('DOMContentLoaded', () => {
+      // Verificar se já temos dados do Supabase no localStorage
+      const supabaseUrl = localStorage.getItem('supabaseUrl');
+      const supabaseKey = localStorage.getItem('supabaseKey');
+      
+      if (supabaseUrl && supabaseKey) {
+        document.getElementById('supabaseUrl').value = supabaseUrl;
+        document.getElementById('supabaseKey').value = supabaseKey;
+        log('Dados do Supabase encontrados no localStorage');
+        
+        // Tentar inicializar automaticamente
+        if (SupabaseClient.init(supabaseUrl, supabaseKey)) {
+          document.getElementById('supabaseStatus').innerHTML = 
+            `<div class="success">Status: Inicializado</div>
+             <div class="text-sm">URL: ${supabaseUrl}</div>`;
+          log('Supabase inicializado automaticamente', 'success');
+        }
+      }
+      
+      // Event listeners
+      
+      // Inicializar Supabase
+      document.getElementById('initSupabase').addEventListener('click', () => {
+        const url = document.getElementById('supabaseUrl').value.trim();
+        const key = document.getElementById('supabaseKey').value.trim();
+        
+        if (!url || !key) {
+          log('URL ou chave do Supabase não fornecidos', 'error');
+          return;
+        }
+        
+        if (SupabaseClient.init(url, key)) {
+          document.getElementById('supabaseStatus').innerHTML = 
+            `<div class="success">Status: Inicializado</div>
+             <div class="text-sm">URL: ${url}</div>`;
+          log('Supabase inicializado com sucesso', 'success');
+        } else {
+          document.getElementById('supabaseStatus').innerHTML = 
+            `<div class="error">Status: Falha na inicialização</div>`;
+          log('Falha ao inicializar Supabase', 'error');
+        }
+      });
+      
+      // Resetar Supabase
+      document.getElementById('resetSupabase').addEventListener('click', () => {
+        SupabaseClient.reset();
+        document.getElementById('supabaseStatus').innerHTML = 'Status: Não inicializado';
+        log('Configuração do Supabase resetada', 'warning');
+      });
+      
+      // Salvar interação
+      document.getElementById('storeInteraction').addEventListener('click', async () => {
+        const prompt = document.getElementById('prompt').value.trim();
+        const response = document.getElementById('response').value.trim();
+        const model = document.getElementById('model').value;
+        const type = document.getElementById('type').value;
+        
+        if (!prompt || !response) {
+          log('Prompt e resposta são obrigatórios', 'error');
+          return;
+        }
+        
+        log(`Salvando interação do tipo "${type}" usando modelo "${model}"...`);
+        
+        try {
+          const result = await AIInteractionsService.storeInteraction(
+            prompt, 
+            response, 
+            model, 
+            type, 
+            { testPage: true, timestamp: new Date().toISOString() }
+          );
+          
+          if (result.success) {
+            log(`Interação salva com sucesso via ${result.source}`, 'success');
+            // Limpar campos
+            document.getElementById('prompt').value = '';
+            document.getElementById('response').value = '';
+          } else {
+            log(`Falha ao salvar interação: ${result.error?.message || 'Erro desconhecido'}`, 'error');
+          }
+        } catch (error) {
+          log(`Erro ao salvar interação: ${error.message}`, 'error');
+        }
+      });
+      
+      // Listar interações
+      document.getElementById('getInteractions').addEventListener('click', async () => {
+        const filterType = document.getElementById('filterType').value;
+        const interactionsList = document.getElementById('interactionsList');
+        
+        log(`Buscando interações${filterType !== 'all' ? ` do tipo "${filterType}"` : ''}...`);
+        interactionsList.innerHTML = '<p class="text-gray-500">Carregando...</p>';
+        
+        try {
+          const options = {
+            limit: 20,
+            sortBy: 'created_at',
+            sortDirection: 'desc'
+          };
+          
+          if (filterType !== 'all') {
+            options.type = filterType;
+          }
+          
+          const result = await AIInteractionsService.getInteractions(options);
+          
+          if (result.success) {
+            log(`${result.data.length} interações encontradas via ${result.source}`, 'success');
+            
+            if (result.data.length === 0) {
+              interactionsList.innerHTML = '<p class="text-gray-500">Nenhuma interação encontrada.</p>';
+              return;
+            }
+            
+            // Renderizar lista
+            const html = result.data.map(item => `
+              <div class="mb-4 p-3 border border-gray-200 rounded-md">
+                <div class="flex justify-between items-start">
+                  <div class="font-medium">${item.model || 'Modelo não especificado'}</div>
+                  <div class="text-xs text-gray-500">${new Date(item.created_at).toLocaleString()}</div>
+                </div>
+                <div class="text-sm bg-gray-50 p-2 my-2 rounded">${item.prompt}</div>
+                <div class="text-xs text-gray-600 mb-2">
+                  Tipo: <span class="font-medium">${item.interaction_type || 'Não especificado'}</span>
+                  ${item.metadata?.stored_locally ? ' (Armazenado localmente)' : ''}
+                </div>
+                <button class="text-xs text-red-600 hover:text-red-800" 
+                        onclick="deleteInteraction('${item.id}')">
+                  Excluir
+                </button>
+              </div>
+            `).join('');
+            
+            interactionsList.innerHTML = html;
+          } else {
+            log(`Falha ao buscar interações: ${result.error?.message || 'Erro desconhecido'}`, 'error');
+            interactionsList.innerHTML = '<p class="text-red-500">Erro ao carregar interações.</p>';
+          }
+        } catch (error) {
+          log(`Erro ao buscar interações: ${error.message}`, 'error');
+          interactionsList.innerHTML = '<p class="text-red-500">Erro ao carregar interações.</p>';
+        }
+      });
+      
+      // Sincronizar interações locais
+      document.getElementById('syncInteractions').addEventListener('click', async () => {
+        if (!SupabaseClient.isInitialized()) {
+          log('Supabase não inicializado. Não é possível sincronizar.', 'error');
+          return;
+        }
+        
+        log('Sincronizando interações locais com Supabase...');
+        
+        try {
+          const result = await AIInteractionsService.syncLocalInteractions();
+          
+          if (result.success) {
+            log(`Sincronização concluída! ${result.synced} interações sincronizadas.`, 'success');
+            if (result.remaining > 0) {
+              log(`${result.remaining} interações ainda estão armazenadas localmente.`, 'info');
+            }
+          } else {
+            log(`Falha na sincronização: ${result.error?.message || 'Erro desconhecido'}`, 'error');
+          }
+        } catch (error) {
+          log(`Erro na sincronização: ${error.message}`, 'error');
+        }
+      });
+      
+      // Limpar interações locais
+      document.getElementById('clearLocal').addEventListener('click', async () => {
+        if (!confirm('Tem certeza que deseja limpar todas as interações armazenadas localmente?')) {
+          return;
+        }
+        
+        log('Limpando interações locais...');
+        
+        try {
+          const result = await AIInteractionsService.clearAllInteractions({ local: true, remote: false });
+          
+          if (result.local.success) {
+            log('Interações locais removidas com sucesso.', 'success');
+          } else {
+            log(`Falha ao limpar interações locais: ${result.local.error?.message || 'Erro desconhecido'}`, 'error');
+          }
+        } catch (error) {
+          log(`Erro ao limpar interações locais: ${error.message}`, 'error');
+        }
+      });
+    });
+    
+    // Função para excluir interação
+    async function deleteInteraction(id) {
+      if (!confirm('Tem certeza que deseja excluir esta interação?')) {
+        return;
+      }
+      
+      log(`Excluindo interação ${id}...`);
+      
+      try {
+        const result = await AIInteractionsService.deleteInteraction(id);
+        
+        if (result.success) {
+          log('Interação excluída com sucesso.', 'success');
+          // Atualizar lista
+          document.getElementById('getInteractions').click();
+        } else {
+          log(`Falha ao excluir interação: ${result.error?.message || 'Erro desconhecido'}`, 'error');
+        }
+      } catch (error) {
+        log(`Erro ao excluir interação: ${error.message}`, 'error');
+      }
+    }
+  </script>
+</body>
+</html>

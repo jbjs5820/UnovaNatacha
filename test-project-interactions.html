@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Project Interactions</title>
+  
+  <!-- Tailwind CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  
+  <!-- Supabase JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <!-- Custom Scripts -->
+  <script src="js/utils/supabaseClient.js"></script>
+  <script src="js/utils/aiInteractionsService.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+  <div class="container mx-auto p-4">
+    <h1 class="text-2xl font-bold mb-4">Test Project Interactions</h1>
+    
+    <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-4" role="alert">
+      <p class="font-bold">Testing the new database schema</p>
+      <p>This page demonstrates how to create and retrieve AI interactions linked to projects, tasks, and documents.</p>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+      <h2 class="text-xl font-semibold mb-4">Supabase Connection</h2>
+      
+      <div class="space-y-4">
+        <div>
+          <label for="supabaseUrl" class="block text-sm font-medium text-gray-700">Supabase URL</label>
+          <input type="text" id="supabaseUrl" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+        </div>
+        
+        <div>
+          <label for="supabaseKey" class="block text-sm font-medium text-gray-700">Supabase Key</label>
+          <input type="text" id="supabaseKey" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+        </div>
+        
+        <button
+          id="initButton"
+          class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+        >
+          Initialize Supabase Client
+        </button>
+      </div>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+      <h2 class="text-xl font-semibold mb-4">Create Project</h2>
+      
+      <div class="space-y-4">
+        <div>
+          <label for="projectName" class="block text-sm font-medium text-gray-700">Project Name</label>
+          <input type="text" id="projectName" class="mt-1 block w-full p-2 border border-gray-300 rounded-md" value="Test Project">
+        </div>
+        
+        <div>
+          <label for="projectDescription" class="block text-sm font-medium text-gray-700">Project Description</label>
+          <textarea id="projectDescription" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">A test project for demonstrating AI interactions</textarea>
+        </div>
+        
+        <button
+          id="createProjectButton"
+          class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+          disabled
+        >
+          Create Project
+        </button>
+      </div>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+      <h2 class="text-xl font-semibold mb-4">Create AI Interaction for Project</h2>
+      
+      <div class="space-y-4">
+        <div>
+          <label for="projectId" class="block text-sm font-medium text-gray-700">Project ID</label>
+          <input type="text" id="projectId" class="mt-1 block w-full p-2 border border-gray-300 rounded-md" placeholder="Select or create a project first">
+        </div>
+        
+        <div>
+          <label for="prompt" class="block text-sm font-medium text-gray-700">Prompt</label>
+          <textarea id="prompt" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">Generate a task list for this project</textarea>
+        </div>
+        
+        <div>
+          <label for="response" class="block text-sm font-medium text-gray-700">Response</label>
+          <textarea id="response" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">1. Research requirements
+2. Create wireframes
+3. Develop prototype
+4. Test with users
+5. Refine based on feedback</textarea>
+        </div>
+        
+        <button
+          id="createInteractionButton"
+          class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          disabled
+        >
+          Create AI Interaction
+        </button>
+      </div>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+      <h2 class="text-xl font-semibold mb-4">View Project Interactions</h2>
+      
+      <div class="space-y-4">
+        <div>
+          <label for="viewProjectId" class="block text-sm font-medium text-gray-700">Project ID</label>
+          <input type="text" id="viewProjectId" class="mt-1 block w-full p-2 border border-gray-300 rounded-md" placeholder="Enter project ID to view interactions">
+        </div>
+        
+        <button
+          id="viewInteractionsButton"
+          class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+          disabled
+        >
+          View Interactions
+        </button>
+      </div>
+    </div>
+    
+    <div id="resultContainer" class="bg-white rounded-lg shadow-md p-6">
+      <h2 class="text-xl font-semibold mb-4">Results</h2>
+      <div id="results" class="whitespace-pre-wrap font-mono text-sm bg-gray-100 p-4 rounded"></div>
+    </div>
+  </div>
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Elements
+      const supabaseUrlInput = document.getElementById('supabaseUrl');
+      const supabaseKeyInput = document.getElementById('supabaseKey');
+      const initButton = document.getElementById('initButton');
+      const createProjectButton = document.getElementById('createProjectButton');
+      const createInteractionButton = document.getElementById('createInteractionButton');
+      const viewInteractionsButton = document.getElementById('viewInteractionsButton');
+      const resultsDiv = document.getElementById('results');
+      
+      // Load saved values if available
+      if (localStorage.getItem('supabaseUrl')) {
+        supabaseUrlInput.value = localStorage.getItem('supabaseUrl');
+      }
+      
+      if (localStorage.getItem('supabaseKey')) {
+        supabaseKeyInput.value = localStorage.getItem('supabaseKey');
+      }
+      
+      // Helper to display results
+      function displayResult(title, data, isError = false) {
+        const titleClass = isError ? 'text-red-600' : 'text-green-600';
+        
+        resultsDiv.innerHTML = `<div class="${titleClass} font-bold">${title}</div>`;
+        
+        if (typeof data === 'object') {
+          resultsDiv.innerHTML += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+        } else {
+          resultsDiv.innerHTML += `<div>${data}</div>`;
+        }
+      }
+      
+      // Initialize Supabase
+      initButton.addEventListener('click', async () => {
+        const supabaseUrl = supabaseUrlInput.value.trim();
+        const supabaseKey = supabaseKeyInput.value.trim();
+        
+        if (!supabaseUrl || !supabaseKey) {
+          displayResult('Error', 'Please enter Supabase URL and key', true);
+          return;
+        }
+        
+        // Save values for next time
+        localStorage.setItem('supabaseUrl', supabaseUrl);
+        localStorage.setItem('supabaseKey', supabaseKey);
+        
+        try {
+          // Initialize Supabase client
+          SupabaseClient.initialize(supabaseUrl, supabaseKey);
+          
+          if (SupabaseClient.isInitialized()) {
+            displayResult('Success', 'Supabase client initialized successfully');
+            
+            // Enable buttons
+            createProjectButton.disabled = false;
+            createInteractionButton.disabled = false;
+            viewInteractionsButton.disabled = false;
+          } else {
+            displayResult('Error', 'Failed to initialize Supabase client', true);
+          }
+        } catch (error) {
+          displayResult('Error', error.message, true);
+        }
+      });
+      
+      // Create Project
+      createProjectButton.addEventListener('click', async () => {
+        const projectName = document.getElementById('projectName').value.trim();
+        const projectDescription = document.getElementById('projectDescription').value.trim();
+        
+        if (!projectName) {
+          displayResult('Error', 'Please enter a project name', true);
+          return;
+        }
+        
+        try {
+          displayResult('Working', 'Creating project...');
+          
+          const { data, error } = await SupabaseClient.getClient().rpc(
+            'create_project',
+            {
+              p_name: projectName,
+              p_description: projectDescription,
+              p_status: 'active',
+              p_metadata: { source: 'test_page' }
+            }
+          );
+          
+          if (error) {
+            displayResult('Error', error, true);
+            return;
+          }
+          
+          displayResult('Success', { project_id: data, message: 'Project created successfully' });
+          
+          // Set the project ID for the interaction
+          document.getElementById('projectId').value = data;
+          document.getElementById('viewProjectId').value = data;
+        } catch (error) {
+          displayResult('Error', error.message, true);
+        }
+      });
+      
+      // Create AI Interaction
+      createInteractionButton.addEventListener('click', async () => {
+        const projectId = document.getElementById('projectId').value.trim();
+        const prompt = document.getElementById('prompt').value.trim();
+        const response = document.getElementById('response').value.trim();
+        
+        if (!prompt || !response) {
+          displayResult('Error', 'Please enter prompt and response', true);
+          return;
+        }
+        
+        try {
+          displayResult('Working', 'Creating AI interaction...');
+          
+          const result = await AIInteractionsService.storeInteraction(
+            prompt,
+            response,
+            'gpt-4',
+            'project-planning',
+            { source: 'test_page' },
+            projectId
+          );
+          
+          if (!result.success) {
+            displayResult('Error', result.error, true);
+            return;
+          }
+          
+          displayResult('Success', { 
+            message: 'AI interaction created successfully',
+            interaction: result.data
+          });
+        } catch (error) {
+          displayResult('Error', error.message, true);
+        }
+      });
+      
+      // View Project Interactions
+      viewInteractionsButton.addEventListener('click', async () => {
+        const projectId = document.getElementById('viewProjectId').value.trim();
+        
+        if (!projectId) {
+          displayResult('Error', 'Please enter a project ID', true);
+          return;
+        }
+        
+        try {
+          displayResult('Working', 'Fetching project interactions...');
+          
+          const result = await AIInteractionsService.getInteractions({
+            projectId,
+            limit: 10
+          });
+          
+          if (result.error) {
+            displayResult('Error', result.error, true);
+            return;
+          }
+          
+          if (result.data.length === 0) {
+            displayResult('Info', 'No interactions found for this project');
+            return;
+          }
+          
+          displayResult('Success', { 
+            message: `Found ${result.data.length} interactions`,
+            interactions: result.data
+          });
+        } catch (error) {
+          displayResult('Error', error.message, true);
+        }
+      });
+    });
+  </script>
+</body>
+</html>

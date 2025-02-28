@@ -80,6 +80,11 @@
   <script src="js/utils/loadEnv.js"></script>
   <script src="js/utils/envConfig.js"></script>
   <script src="js/utils/modelUtils.js"></script>
+  <script src="js/utils/supabaseClient.js"></script>
+  <script src="js/utils/supabaseSetup.js"></script>
+  <script src="js/utils/supabaseSchemaSetup.js"></script>
+  <script src="js/utils/aiUtils.js"></script>
+  <script src="js/utils/aiInteractionsService.js"></script>
   <script src="js/utils/geminiApi.js"></script>
   <script type="text/babel" src="js/utils/models.js"></script>
   <script type="text/babel" src="js/components/TasksView.js"></script>
@@ -90,6 +95,7 @@
   <script type="text/babel" src="js/components/ai/TextAnalysisTab.js"></script>
   <script type="text/babel" src="js/components/ai/AIAssistantView.js"></script>
   <script type="text/babel" src="js/components/ExportView.js"></script>
+  <script type="text/babel" src="js/components/BackofficeView.js"></script>
   <script type="text/babel" src="js/components/SettingsView.js"></script>
   <script type="text/babel" src="js/components/HelpView.js"></script>
   
@@ -103,6 +109,19 @@
       React.useEffect(() => {
         EnvConfig.initFromEnvFile().then(() => {
           console.log('Variáveis de ambiente inicializadas');
+          
+          // Inicializar Supabase com as variáveis de ambiente
+          const supabaseUrl = EnvConfig.SUPABASE_URL;
+          const supabaseKey = EnvConfig.SUPABASE_ANON_KEY;
+          
+          if (supabaseUrl && supabaseKey) {
+            const success = SupabaseClient.init(supabaseUrl, supabaseKey);
+            if (success) {
+              console.log('Supabase inicializado com variáveis de ambiente');
+            } else {
+              console.warn('Falha ao inicializar Supabase com variáveis de ambiente');
+            }
+          }
         });
       }, []);
       

@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Supabase Test</title>
+  <!-- Supabase Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    button {
+      padding: 10px 15px;
+      background-color: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover {
+      background-color: #2563eb;
+    }
+    pre {
+      background-color: #f1f5f9;
+      padding: 15px;
+      border-radius: 4px;
+      overflow: auto;
+    }
+    .status {
+      margin-top: 20px;
+      padding: 10px;
+      border-radius: 4px;
+    }
+    .success {
+      background-color: #dcfce7;
+      color: #166534;
+    }
+    .error {
+      background-color: #fee2e2;
+      color: #b91c1c;
+    }
+    input {
+      padding: 8px;
+      margin: 5px 0;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    label {
+      display: block;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>Supabase Connection Test</h1>
+  
+  <div>
+    <label for="supabaseUrl">Supabase URL:</label>
+    <input type="text" id="supabaseUrl" placeholder="https://your-project.supabase.co">
+    
+    <label for="supabaseKey">Supabase Anon Key:</label>
+    <input type="text" id="supabaseKey" placeholder="your-anon-key">
+    
+    <div style="margin-top: 15px;">
+      <button id="loadFromEnv">Load from .env.local</button>
+      <button id="initClient">Initialize Client</button>
+      <button id="testConnection">Test Connection</button>
+    </div>
+  </div>
+  
+  <div id="status" class="status"></div>
+  
+  <h2>Results:</h2>
+  <pre id="results">No results yet</pre>
+  
+  <script>
+    // Variables for Supabase client
+    let supabaseClient = null;
+    
+    // DOM elements
+    const supabaseUrlInput = document.getElementById('supabaseUrl');
+    const supabaseKeyInput = document.getElementById('supabaseKey');
+    const statusDiv = document.getElementById('status');
+    const resultsDiv = document.getElementById('results');
+    
+    // Load from .env.local
+    document.getElementById('loadFromEnv').addEventListener('click', async () => {
+      try {
+        const response = await fetch('.env.local');
+        if (response.ok) {
+          const text = await response.text();
+          const envVars = {};
+          
+          // Parse the .env file line by line
+          text.split('\n').forEach(line => {
+            // Ignore comments and empty lines
+            if (line.trim() && !line.startsWith('#')) {
+              const [key, value] = line.split('=').map(part => part.trim());
+              if (key && value) {
+                // Remove quotes if present
+                const cleanValue = value.replace(/^["'](.*)["']$/, '$1');
+                envVars[key] = cleanValue;
+              }
+            }
+          });
+          
+          // Set the input values
+          if (envVars.NEXT_PUBLIC_SUPABASE_URL) {
+            supabaseUrlInput.value = envVars.NEXT_PUBLIC_SUPABASE_URL;
+          }
+          
+          if (envVars.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+            supabaseKeyInput.value = envVars.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+          }
+          
+          showStatus('Environment variables loaded successfully', true);
+          resultsDiv.textContent = JSON.stringify(envVars, null, 2);
+        } else {
+          showStatus('Failed to load .env.local file', false);
+        }
+      } catch (error) {
+        showStatus(`Error loading environment variables: ${error.message}`, false);
+      }
+    });
+    
+    // Initialize Supabase client
+    document.getElementById('initClient').addEventListener('click', () => {
+      const supabaseUrl = supabaseUrlInput.value.trim();
+      const supabaseKey = supabaseKeyInput.value.trim();
+      
+      if (!supabaseUrl || !supabaseKey) {
+        showStatus('Supabase URL and key are required', false);
+        return;
+      }
+      
+      try {
+        // Create Supabase client
+        supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+        showStatus('Supabase client initialized successfully', true);
+        resultsDiv.textContent = 'Client initialized. Ready to test connection.';
+      } catch (error) {
+        showStatus(`Failed to initialize Supabase client: ${error.message}`, false);
+      }
+    });
+    
+    // Test connection
+    document.getElementById('testConnection').addEventListener('click', async () => {
+      if (!supabaseClient) {
+        showStatus('Please initialize the Supabase client first', false);
+        return;
+      }
+      
+      try {
+        // Test a simple query
+        const { data, error } = await supabaseClient
+          .from('ai_interactions')
+          .select('count', { count: 'exact', head: true });
+        
+        if (error) {
+          if (error.code === '42P01') {
+            showStatus('Table ai_interactions does not exist. You need to create it first.', false);
+          } else {
+            showStatus(`Error connecting to Supabase: ${error.message}`, false);
+          }
+          resultsDiv.textContent = JSON.stringify(error, null, 2);
+        } else {
+          showStatus('Successfully connected to Supabase!', true);
+          resultsDiv.textContent = JSON.stringify(data, null, 2);
+        }
+      } catch (error) {
+        showStatus(`Error testing connection: ${error.message}`, false);
+        resultsDiv.textContent = error.stack || error.message;
+      }
+    });
+    
+    // Helper function to show status
+    function showStatus(message, isSuccess) {
+      statusDiv.textContent = message;
+      statusDiv.className = 'status ' + (isSuccess ? 'success' : 'error');
+    }
+  </script>
+</body>
+</html>

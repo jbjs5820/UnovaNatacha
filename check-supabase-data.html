@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Supabase Data Check</title>
+  
+  <!-- Supabase Client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .container {
+      background-color: #f8f9fa;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #333;
+      margin-top: 0;
+    }
+    .status {
+      margin-top: 20px;
+      padding: 10px;
+      border-radius: 4px;
+    }
+    .success {
+      background-color: #c6f6d5;
+      color: #2f855a;
+    }
+    .error {
+      background-color: #fed7d7;
+      color: #c53030;
+    }
+    .loading {
+      background-color: #e9f5fd;
+      color: #2b6cb0;
+    }
+    pre {
+      background-color: #f1f5f9;
+      padding: 10px;
+      border-radius: 4px;
+      overflow: auto;
+      max-height: 300px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background-color: #f2f2f2;
+      font-weight: bold;
+    }
+    tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+    button {
+      background-color: #4299e1;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+    button:hover {
+      background-color: #3182ce;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Supabase Data Check</h1>
+    
+    <div>
+      <button id="checkBtn">Check AI Interactions Table</button>
+      <button id="insertBtn">Insert Test Data</button>
+      <button id="clearBtn">Clear Results</button>
+    </div>
+    
+    <div id="status" class="status" style="display: none;"></div>
+    
+    <h2>Results:</h2>
+    <div id="results">
+      <p>No results yet. Click "Check AI Interactions Table" to view data.</p>
+    </div>
+  </div>
+  
+  <script>
+    // DOM Elements
+    const checkBtn = document.getElementById('checkBtn');
+    const insertBtn = document.getElementById('insertBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const statusDiv = document.getElementById('status');
+    const resultsDiv = document.getElementById('results');
+    
+    // Initialize Supabase client from localStorage
+    let supabaseClient = null;
+    
+    function initSupabase() {
+      const url = localStorage.getItem('supabaseUrl');
+      const key = localStorage.getItem('supabaseKey');
+      
+      if (!url || !key) {
+        showStatus('Supabase credentials not found in localStorage. Please set them in the main app first.', 'error');
+        return false;
+      }
+      
+      try {
+        supabaseClient = supabase.createClient(url, key);
+        return true;
+      } catch (error) {
+        showStatus(`Error initializing Supabase client: ${error.message}`, 'error');
+        return false;
+      }
+    }
+    
+    // Check AI Interactions table
+    checkBtn.addEventListener('click', async () => {
+      if (!initSupabase()) return;
+      
+      showStatus('Checking AI Interactions table...', 'loading');
+      
+      try {
+        // Query the table
+        const { data, error, count } = await supabaseClient
+          .from('ai_interactions')
+          .select('*', { count: 'exact' });
+        
+        if (error) {
+          showStatus(`Error querying table: ${error.message}`, 'error');
+          resultsDiv.innerHTML = `<pre>${JSON.stringify(error, null, 2)}</pre>`;
+          return;
+        }
+        
+        if (!data || data.length === 0) {
+          showStatus('No data found in the AI Interactions table.', 'error');
+          resultsDiv.innerHTML = '<p>The table exists but contains no records.</p>';
+          return;
+        }
+        
+        showStatus(`Found ${data.length} records in the AI Interactions table.`, 'success');
+        
+        // Create a table to display the data
+        let tableHtml = `
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Created At</th>
+                <th>Prompt</th>
+                <th>Response</th>
+                <th>Model</th>
+                <th>Type</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
+        
+        data.forEach(row => {
+          const createdAt = new Date(row.created_at).toLocaleString();
+          const promptPreview = row.prompt.length > 50 ? row.prompt.substring(0, 50) + '...' : row.prompt;
+          const responsePreview = row.response.length > 50 ? row.response.substring(0, 50) + '...' : row.response;
+          
+          tableHtml += `
+            <tr>
+              <td>${row.id}</td>
+              <td>${createdAt}</td>
+              <td title="${row.prompt}">${promptPreview}</td>
+              <td title="${row.response}">${responsePreview}</td>
+              <td>${row.model || 'N/A'}</td>
+              <td>${row.interaction_type || 'N/A'}</td>
+            </tr>
+          `;
+        });
+        
+        tableHtml += `
+            </tbody>
+          </table>
+          <p>Raw data:</p>
+          <pre>${JSON.stringify(data, null, 2)}</pre>
+        `;
+        
+        resultsDiv.innerHTML = tableHtml;
+      } catch (error) {
+        showStatus(`Error: ${error.message}`, 'error');
+        resultsDiv.innerHTML = `<pre>${JSON.stringify(error, null, 2)}</pre>`;
+      }
+    });
+    
+    // Insert test data
+    insertBtn.addEventListener('click', async () => {
+      if (!initSupabase()) return;
+      
+      showStatus('Inserting test data...', 'loading');
+      
+      try {
+        const testData = {
+          prompt: `Test prompt created at ${new Date().toLocaleString()}`,
+          response: 'This is a test response from the data check tool',
+          model: 'gemini-pro',
+          interaction_type: 'test',
+          metadata: { 
+            source: 'check-supabase-data.html', 
+            timestamp: new Date().toISOString(),
+            test: true
+          }
+        };
+        
+        const { data, error } = await supabaseClient
+          .from('ai_interactions')
+          .insert([testData])
+          .select();
+        
+        if (error) {
+          showStatus(`Error inserting data: ${error.message}`, 'error');
+          resultsDiv.innerHTML = `<pre>${JSON.stringify(error, null, 2)}</pre>`;
+          return;
+        }
+        
+        showStatus('Test data inserted successfully!', 'success');
+        resultsDiv.innerHTML = `
+          <p>Successfully inserted new record:</p>
+          <pre>${JSON.stringify(data, null, 2)}</pre>
+        `;
+      } catch (error) {
+        showStatus(`Error: ${error.message}`, 'error');
+        resultsDiv.innerHTML = `<pre>${JSON.stringify(error, null, 2)}</pre>`;
+      }
+    });
+    
+    // Clear results
+    clearBtn.addEventListener('click', () => {
+      resultsDiv.innerHTML = '<p>Results cleared.</p>';
+      statusDiv.style.display = 'none';
+    });
+    
+    // Helper function to show status
+    function showStatus(message, type) {
+      statusDiv.textContent = message;
+      statusDiv.className = `status ${type}`;
+      statusDiv.style.display = 'block';
+    }
+    
+    // Check if Supabase is initialized on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      const url = localStorage.getItem('supabaseUrl');
+      const key = localStorage.getItem('supabaseKey');
+      
+      if (url && key) {
+        statusDiv.textContent = 'Supabase credentials found in localStorage.';
+        statusDiv.className = 'status success';
+        statusDiv.style.display = 'block';
+      } else {
+        statusDiv.textContent = 'Supabase credentials not found. Please set them in the main app first.';
+        statusDiv.className = 'status error';
+        statusDiv.style.display = 'block';
+      }
+    });
+  </script>
+</body>
+</html>

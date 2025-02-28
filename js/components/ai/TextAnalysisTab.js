@@ -23,7 +23,16 @@ function TextAnalysisTab() {
         apiKey,
         inputText,
         analysisType,
-        { model }
+        { 
+          model,
+          interactionType: 'text_analysis',
+          metadata: {
+            analysisType,
+            textLength: inputText.length,
+            characterCount: inputText.length,
+            wordCount: inputText.trim().split(/\s+/).length
+          }
+        }
       );
       
       setAnalysisResult(result);
