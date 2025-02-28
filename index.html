@@ -29,8 +29,47 @@
   <div id="app-root"></div>
   
   <!-- Importar componentes -->
+  <script>
+    // Debug localStorage
+    console.log('DEBUG localStorage:');
+    console.log('phd-resources:', localStorage.getItem('phd-resources'));
+    
+    // Force clear resources to fix the issue
+    console.log('Forcing clear of resources in localStorage');
+    localStorage.removeItem('phd-resources');
+    
+    // Add default resources
+    const defaultDebugResources = [
+      {
+        id: 1,
+        title: 'Exemplo de Recurso',
+        type: 'Artigo Científico',
+        author: 'Autor Exemplo',
+        year: 2023
+      }
+    ];
+    localStorage.setItem('phd-resources', JSON.stringify(defaultDebugResources));
+    console.log('Added default resources to localStorage');
+    
+    try {
+      const savedResources = localStorage.getItem('phd-resources');
+      if (savedResources) {
+        console.log('Parsed resources:', JSON.parse(savedResources));
+      }
+    } catch (e) {
+      console.error('Error parsing resources:', e);
+      // Clear corrupted resources
+      console.log('Clearing corrupted resources from localStorage');
+      localStorage.removeItem('phd-resources');
+    }
+    
+    // Force reset of model in localStorage
+    console.log('Previous model:', localStorage.getItem('geminiModel'));
+    // Model will be normalized by ModelUtils.cleanupOldModels() after it loads
+  </script>
   <script src="js/utils/loadEnv.js"></script>
   <script src="js/utils/envConfig.js"></script>
+  <script src="js/utils/modelUtils.js"></script>
   <script src="js/utils/geminiApi.js"></script>
   <script type="text/babel" src="js/utils/models.js"></script>
   <script type="text/babel" src="js/components/TasksView.js"></script>
@@ -57,21 +96,64 @@
         });
       }, []);
       
-      const [activeTab, setActiveTab] = React.useState('tasks');
+      // Estado para as tarefas
       const [tasks, setTasks] = React.useState(() => {
-        const savedTasks = localStorage.getItem('phd-tasks');
-        return savedTasks ? JSON.parse(savedTasks) : defaultTasks;
+        try {
+          const savedTasks = localStorage.getItem('phd-tasks');
+          return savedTasks ? JSON.parse(savedTasks) : [];
+        } catch (e) {
+          console.error('Erro ao carregar tarefas:', e);
+          return [];
+        }
       });
       
+      // Estado para os projetos
       const [projects, setProjects] = React.useState(() => {
-        const savedProjects = localStorage.getItem('phd-projects');
-        return savedProjects ? JSON.parse(savedProjects) : defaultProjects;
+        try {
+          const savedProjects = localStorage.getItem('phd-projects');
+          return savedProjects ? JSON.parse(savedProjects) : [];
+        } catch (e) {
+          console.error('Erro ao carregar projetos:', e);
+          return [];
+        }
       });
       
-      const [resources, setResources] = React.useState(() => {
-        const savedResources = localStorage.getItem('phd-resources');
-        return savedResources ? JSON.parse(savedResources) : defaultResources;
-      });
+      // Estado para os recursos - inicialização defensiva
+      const [resources, setResources] = React.useState([]);
+      
+      // Carregar recursos de forma segura
+      React.useEffect(() => {
+        try {
+          const savedResources = localStorage.getItem('phd-resources');
+          if (savedResources) {
+            const parsedResources = JSON.parse(savedResources);
+            if (Array.isArray(parsedResources)) {
+              setResources(parsedResources);
+              console.log('Recursos carregados com sucesso:', parsedResources.length);
+            } else {
+              console.error('Recursos não são um array:', parsedResources);
+              // Definir recursos padrão
+              const defaultResources = [
+                {
+                  id: 1,
+                  title: 'Exemplo de Recurso',
+                  type: 'Artigo Científico',
+                  author: 'Autor Exemplo',
+                  year: 2023
+                }
+              ];
+              setResources(defaultResources);
+              localStorage.setItem('phd-resources', JSON.stringify(defaultResources));
+            }
+          } else {
+            console.log('Nenhum recurso encontrado no localStorage');
+          }
+        } catch (e) {
+          console.error('Erro ao carregar recursos:', e);
+          // Limpar recursos corrompidos
+          localStorage.removeItem('phd-resources');
+        }
+      }, []);
       
       // Configurações da aplicação
       const [settings, setSettings] = React.useState(() => {
@@ -111,6 +193,8 @@
           document.documentElement.classList.remove('dark');
         }
       }, [settings.theme]);
+      
+      const [activeTab, setActiveTab] = React.useState('tasks');
       
       return (
         <div className="container mx-auto px-4 py-8">

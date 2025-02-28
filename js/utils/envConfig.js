@@ -2,7 +2,7 @@
 const EnvConfig = {
   // Valores padrão (serão substituídos se variáveis de ambiente estiverem disponíveis)
   GEMINI_API_KEY: '',
-  DEFAULT_MODEL: 'gemini-2.0-pro-exp-02-05',
+  DEFAULT_MODEL: 'gemini-2.0-flash',
   DEFAULT_LANGUAGE: 'pt-PT',
   DEFAULT_THEME: 'light',
   
@@ -32,7 +32,7 @@ const EnvConfig = {
   // Método para inicializar variáveis de ambiente a partir de um arquivo .env.local
   initFromEnvFile: async function() {
     try {
-      const response = await fetch('/.env.local');
+      const response = await fetch('.env.local');
       if (response.ok) {
         const text = await response.text();
         const envVars = {};

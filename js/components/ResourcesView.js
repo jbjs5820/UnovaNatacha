@@ -1,112 +1,166 @@
-// Componente de visualização e gestão de recursos
-const ResourcesView = ({ resources, setResources }) => {
-  const [resourceFormData, setResourceFormData] = React.useState(createResourceModel());
+// Enhanced ResourcesViewNew component with full functionality
+const ResourcesViewNew = ({ resources, setResources }) => {
+  // State management
+  const [resourceFormData, setResourceFormData] = React.useState({
+    title: '',
+    type: 'Artigo Científico',
+    author: '',
+    year: new Date().getFullYear(),
+    description: '',
+    url: '',
+    areas: [],
+    relevance: 0,
+    notes: ''
+  });
   const [filterType, setFilterType] = React.useState('all');
   const [searchTerm, setSearchTerm] = React.useState('');
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [showModal, setShowModal] = React.useState(false);
   
-  // Filtrar recursos
-  const filteredResources = resources.filter(resource => {
-    // Filtro por tipo
-    const typeMatch = filterType === 'all' || resource.type === filterType;
-    
-    // Termo de pesquisa
-    const searchLower = searchTerm.toLowerCase();
-    const searchMatch = !searchTerm || 
-                        resource.title.toLowerCase().includes(searchLower) ||
-                        resource.authors.toLowerCase().includes(searchLower) ||
-                        resource.description.toLowerCase().includes(searchLower) ||
-                        resource.areas.some(area => area.toLowerCase().includes(searchLower));
-    
-    return typeMatch && searchMatch;
-  });
+  // Load resources on mount
+  React.useEffect(() => {
+    try {
+      const savedResources = localStorage.getItem('phd-resources');
+      if (savedResources) {
+        const parsedResources = JSON.parse(savedResources);
+        if (Array.isArray(parsedResources)) {
+          setResources(parsedResources);
+        }
+      }
+    } catch (e) {
+      console.error('Erro ao carregar recursos:', e);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
   
-  // Handle changes to the resource form
+  // Filter resources
+  const filteredResources = React.useMemo(() => {
+    return resources.filter(resource => {
+      // Type filter
+      const typeMatch = filterType === 'all' || resource.type === filterType;
+      
+      // Search term
+      const searchLower = searchTerm.toLowerCase();
+      const searchMatch = !searchTerm || 
+        resource.title?.toLowerCase().includes(searchLower) ||
+        resource.author?.toLowerCase().includes(searchLower) ||
+        resource.description?.toLowerCase().includes(searchLower) ||
+        resource.areas?.some(area => area.toLowerCase().includes(searchLower));
+      
+      return typeMatch && searchMatch;
+    });
+  }, [resources, filterType, searchTerm]);
+  
+  // Form handlers
   const handleResourceFormChange = (e) => {
     const { name, value } = e.target;
-    let newData = {
-      ...resourceFormData,
+    setResourceFormData(prev => ({
+      ...prev,
       [name]: value
-    };
-    
-    // Auto-detect research areas for papers when title or abstract changes
-    if ((name === 'title' || name === 'description') && resourceFormData.type === 'Artigo Científico') {
-      const detectedAreas = detectResearchAreas(`${newData.title} ${newData.description}`);
-      if (detectedAreas.length > 0) {
-        newData.areas = detectedAreas;
-      }
-      
-      // Calculate relevance score
-      newData.relevance = calculateRelevance(newData);
-    }
-    
-    setResourceFormData(newData);
+    }));
   };
   
-  // Handle changes to area tags
   const handleAreaChange = (e) => {
-    const areasText = e.target.value;
-    setResourceFormData({
-      ...resourceFormData,
-      areas: areasText.split(',').map(area => area.trim())
-    });
+    const areas = e.target.value.split(',').map(area => area.trim()).filter(Boolean);
+    setResourceFormData(prev => ({
+      ...prev,
+      areas
+    }));
   };
   
-  // Add a new resource
+  // Resource management
   const addResource = (e) => {
     e.preventDefault();
     const newResource = {
       ...resourceFormData,
       id: Date.now(),
-      areas: typeof resourceFormData.areas === 'string' 
-        ? resourceFormData.areas.split(',').map(area => area.trim()) 
-        : resourceFormData.areas,
       dateAdded: new Date().toISOString().split('T')[0]
     };
     
-    setResources([...resources, newResource]);
-    setResourceFormData(createResourceModel());
-    document.getElementById('addResourceModal').classList.add('hidden');
+    const updatedResources = [...resources, newResource];
+    setResources(updatedResources);
+    localStorage.setItem('phd-resources', JSON.stringify(updatedResources));
+    setShowModal(false);
+    setResourceFormData({
+      title: '',
+      type: 'Artigo Científico',
+      author: '',
+      year: new Date().getFullYear(),
+      description: '',
+      url: '',
+      areas: [],
+      relevance: 0,
+      notes: ''
+    });
   };
   
-  // Delete a resource
   const deleteResource = (id) => {
     if (confirm('Tem a certeza que pretende eliminar este recurso?')) {
-      setResources(resources.filter(resource => resource.id !== id));
+      const updatedResources = resources.filter(r => r.id !== id);
+      setResources(updatedResources);
+      localStorage.setItem('phd-resources', JSON.stringify(updatedResources));
     }
   };
   
-  // Modal toggle
-  const toggleResourceModal = (show) => {
-    const modal = document.getElementById('addResourceModal');
-    if (show) {
-      modal.classList.remove('hidden');
-    } else {
-      modal.classList.add('hidden');
+  const resetResources = () => {
+    try {
+      const defaultResources = [
+        {
+          id: 1,
+          title: 'Métodos Econométricos para Dados em Painel',
+          type: 'Livro',
+          author: 'Wooldridge, J.',
+          year: 2020,
+          notes: 'Capítulos 10-12 particularmente relevantes para a nossa metodologia',
+          area: 'Economia',
+          relevance: 80
+        },
+        {
+          id: 2,
+          title: 'Abordagem da Teoria dos Jogos à Tomada de Decisão em Gestão',
+          type: 'Artigo Científico',
+          author: 'Schmidt, B.',
+          year: 2023,
+          url: 'https://doi.org/10.1234/example',
+          notes: 'Fornece estrutura teórica para a nossa análise',
+          area: 'Gestão',
+          relevance: 70
+        }
+      ];
+      
+      setResources(defaultResources);
+      localStorage.setItem('phd-resources', JSON.stringify(defaultResources));
+      alert('Recursos redefinidos com sucesso!');
+    } catch (error) {
+      console.error('Erro ao redefinir recursos:', error);
+      alert('Erro ao redefinir recursos: ' + error.message);
     }
   };
   
-  // Get color based on relevance
-  const getRelevanceColor = (relevance) => {
-    if (relevance >= 80) return 'bg-green-100 text-green-800';
-    if (relevance >= 60) return 'bg-green-50 text-green-700';
-    if (relevance >= 40) return 'bg-yellow-100 text-yellow-800';
-    if (relevance >= 20) return 'bg-yellow-50 text-yellow-700';
-    return 'bg-gray-100 text-gray-800';
-  };
-  
+  // Render
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex justify-between items-center">
-        <h2 className="text-xl font-bold text-gray-800">Recursos Académicos</h2>
-        <button 
-          onClick={() => toggleResourceModal(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-200"
-        >
-          + Novo Recurso
-        </button>
+        <h2 className="text-2xl font-bold text-gray-800">Recursos Académicos</h2>
+        <div className="flex space-x-2">
+          <button 
+            onClick={() => setShowModal(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+          >
+            + Novo Recurso
+          </button>
+          <button 
+            onClick={resetResources}
+            className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded"
+          >
+            Redefinir
+          </button>
+        </div>
       </div>
       
-      {/* Filtros e pesquisa */}
+      {/* Search and Filters */}
       <div className="flex flex-wrap gap-4">
         <div className="flex-grow max-w-sm">
           <input
@@ -161,246 +215,235 @@ const ResourcesView = ({ resources, setResources }) => {
         </div>
       </div>
       
-      {/* Lista de recursos */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredResources.map(resource => (
-          <div key={resource.id} className="bg-white rounded-lg shadow p-6">
-            <div className="flex justify-between items-start">
-              <h3 className="text-lg font-bold text-gray-800">{resource.title}</h3>
-              <div className="flex space-x-2">
-                <button 
-                  onClick={() => {
-                    // Implementar edição
-                  }}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                  </svg>
-                </button>
-                <button 
-                  onClick={() => deleteResource(resource.id)}
-                  className="text-gray-400 hover:text-red-600"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-            
-            <div className="mt-2">
-              <span className={`inline-block px-2 py-1 text-xs font-semibold rounded-full mr-2 ${
-                resource.type === 'Artigo Científico' ? 'bg-blue-100 text-blue-800' :
-                resource.type === 'Livro' ? 'bg-purple-100 text-purple-800' :
-                'bg-gray-100 text-gray-800'
-              }`}>
-                {resource.type}
-              </span>
-              
-              {resource.type === 'Artigo Científico' && resource.relevance > 0 && (
-                <span className={`inline-block px-2 py-1 text-xs font-semibold rounded-full ${getRelevanceColor(resource.relevance)}`}>
-                  Relevância: {resource.relevance}%
-                </span>
-              )}
-            </div>
-            
-            <p className="text-gray-600 mt-2">
-              {resource.description.length > 120 
-                ? `${resource.description.substring(0, 120)}...` 
-                : resource.description}
-            </p>
-            
-            <div className="mt-4">
-              {resource.authors && (
-                <p className="text-sm text-gray-600">
-                  <span className="font-semibold">Autores:</span> {resource.authors}
-                </p>
-              )}
-              
-              {resource.year && (
-                <p className="text-sm text-gray-600">
-                  <span className="font-semibold">Ano:</span> {resource.year}
-                </p>
-              )}
-              
-              {resource.url && (
-                <p className="text-sm text-gray-600 truncate">
-                  <span className="font-semibold">URL:</span> <a href={resource.url} target="_blank" className="text-blue-600 hover:underline">{resource.url}</a>
-                </p>
-              )}
-            </div>
-            
-            <div className="mt-4 flex flex-wrap gap-2">
-              {resource.areas.map((area, index) => (
-                <span key={index} className="inline-block px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
-                  {area}
-                </span>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-      
-      {/* Aviso quando não existem recursos */}
-      {filteredResources.length === 0 && (
+      {/* Resource List */}
+      {isLoading ? (
         <div className="text-center py-10">
-          <p className="text-gray-500">Não foram encontrados recursos com os critérios selecionados.</p>
+          <p className="text-gray-500">A carregar recursos...</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredResources.length > 0 ? (
+            filteredResources.map(resource => (
+              <div key={resource.id} className="bg-white rounded-lg shadow p-6">
+                <div className="flex justify-between items-start">
+                  <h3 className="text-lg font-bold text-gray-800">{resource.title}</h3>
+                  <div className="flex space-x-2">
+                    <button 
+                      onClick={() => {
+                        setResourceFormData(resource);
+                        setShowModal(true);
+                      }}
+                      className="text-gray-400 hover:text-gray-600"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                      </svg>
+                    </button>
+                    <button 
+                      onClick={() => deleteResource(resource.id)}
+                      className="text-gray-400 hover:text-red-600"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="mt-2">
+                  <span className="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                    {resource.type}
+                  </span>
+                  {resource.relevance && (
+                    <span className={`ml-2 px-2 py-1 text-xs font-semibold rounded-full ${
+                      resource.relevance >= 80 ? 'bg-green-100 text-green-800' :
+                      resource.relevance >= 60 ? 'bg-blue-100 text-blue-800' :
+                      'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {resource.relevance}% relevante
+                    </span>
+                  )}
+                </div>
+                
+                <p className="text-gray-600 mt-2">{resource.author}</p>
+                <p className="text-gray-500 text-sm">{resource.year}</p>
+                
+                {resource.areas?.length > 0 && (
+                  <div className="mt-2">
+                    {resource.areas.map(area => (
+                      <span key={area} className="inline-block bg-gray-100 rounded-full px-3 py-1 text-sm font-semibold text-gray-700 mr-2 mb-2">
+                        {area}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                
+                {resource.description && (
+                  <p className="text-gray-600 mt-2 text-sm">{resource.description}</p>
+                )}
+                
+                {resource.url && (
+                  <a 
+                    href={resource.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline mt-2 block text-sm"
+                  >
+                    Ver recurso online
+                  </a>
+                )}
+              </div>
+            ))
+          ) : (
+            <div className="col-span-3 text-center py-10">
+              <p className="text-gray-500">Não foram encontrados recursos.</p>
+              <button 
+                onClick={resetResources}
+                className="mt-4 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded"
+              >
+                Adicionar Recursos Padrão
+              </button>
+            </div>
+          )}
         </div>
       )}
       
-      {/* Modal para adicionar novo recurso */}
-      <div id="addResourceModal" className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
-        <div className="bg-white rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
-          <h2 className="text-xl font-bold mb-4">Adicionar Novo Recurso</h2>
-          <form onSubmit={addResource}>
-            <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="type">
-                Tipo de Recurso
-              </label>
-              <select
-                id="type"
-                name="type"
-                value={resourceFormData.type}
-                onChange={handleResourceFormChange}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              >
-                <option value="Artigo Científico">Artigo Científico</option>
-                <option value="Livro">Livro</option>
-                <option value="Website">Website</option>
-                <option value="Outro">Outro</option>
-              </select>
-            </div>
+      {/* Add/Edit Resource Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <h3 className="text-xl font-bold mb-4">
+              {resourceFormData.id ? 'Editar Recurso' : 'Novo Recurso'}
+            </h3>
             
-            <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="title">
-                Título
-              </label>
-              <input
-                type="text"
-                id="title"
-                name="title"
-                value={resourceFormData.title}
-                onChange={handleResourceFormChange}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                required
-              />
-            </div>
-            
-            <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="authors">
-                Autores
-              </label>
-              <input
-                type="text"
-                id="authors"
-                name="authors"
-                value={resourceFormData.authors}
-                onChange={handleResourceFormChange}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              />
-            </div>
-            
-            <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="year">
-                Ano
-              </label>
-              <input
-                type="number"
-                id="year"
-                name="year"
-                value={resourceFormData.year}
-                onChange={handleResourceFormChange}
-                min="1900"
-                max={new Date().getFullYear()}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-              />
-            </div>
-            
-            <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="description">
-                {resourceFormData.type === 'Artigo Científico' ? 'Resumo/Abstract' : 'Descrição'}
-              </label>
-              <textarea
-                id="description"
-                name="description"
-                value={resourceFormData.description}
-                onChange={handleResourceFormChange}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                rows="4"
-              ></textarea>
-            </div>
-            
-            <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="url">
-                URL
-              </label>
-              <input
-                type="url"
-                id="url"
-                name="url"
-                value={resourceFormData.url}
-                onChange={handleResourceFormChange}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                placeholder="https://..."
-              />
-            </div>
-            
-            <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-bold mb-2">
-                Áreas de Pesquisa
-                {resourceFormData.type === 'Artigo Científico' && resourceFormData.areas.length > 0 && (
-                  <span className="ml-2 text-xs font-normal text-gray-500">(auto-detectado)</span>
-                )}
-              </label>
-              <input
-                type="text"
-                value={Array.isArray(resourceFormData.areas) ? resourceFormData.areas.join(', ') : resourceFormData.areas}
-                onChange={handleAreaChange}
-                className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                placeholder="Economia, Gestão, Ciência de Dados, ..."
-              />
-            </div>
-            
-            {resourceFormData.type === 'Artigo Científico' && resourceFormData.relevance > 0 && (
+            <form onSubmit={addResource}>
               <div className="mb-4">
-                <label className="block text-gray-700 text-sm font-bold mb-2">
-                  Relevância Calculada: {resourceFormData.relevance}%
+                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="title">
+                  Título
                 </label>
-                <div className="w-full bg-gray-200 rounded-full h-2.5">
-                  <div 
-                    className={`h-2.5 rounded-full ${
-                      resourceFormData.relevance >= 80 ? 'bg-green-600' :
-                      resourceFormData.relevance >= 50 ? 'bg-blue-600' :
-                      resourceFormData.relevance >= 30 ? 'bg-yellow-600' :
-                      'bg-gray-400'
-                    }`} 
-                    style={{ width: `${resourceFormData.relevance}%` }}
-                  ></div>
-                </div>
+                <input
+                  type="text"
+                  id="title"
+                  name="title"
+                  value={resourceFormData.title}
+                  onChange={handleResourceFormChange}
+                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                  required
+                />
               </div>
-            )}
-            
-            <div className="flex items-center justify-between">
-              <button
-                type="submit"
-                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-200"
-              >
-                Guardar
-              </button>
-              <button
-                type="button"
-                onClick={() => toggleResourceModal(false)}
-                className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-200"
-              >
-                Cancelar
-              </button>
-            </div>
-          </form>
+              
+              <div className="mb-4">
+                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="type">
+                  Tipo
+                </label>
+                <select
+                  id="type"
+                  name="type"
+                  value={resourceFormData.type}
+                  onChange={handleResourceFormChange}
+                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                >
+                  <option value="Artigo Científico">Artigo Científico</option>
+                  <option value="Livro">Livro</option>
+                  <option value="Website">Website</option>
+                </select>
+              </div>
+              
+              <div className="mb-4">
+                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="author">
+                  Autor
+                </label>
+                <input
+                  type="text"
+                  id="author"
+                  name="author"
+                  value={resourceFormData.author}
+                  onChange={handleResourceFormChange}
+                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                  required
+                />
+              </div>
+              
+              <div className="mb-4">
+                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="year">
+                  Ano
+                </label>
+                <input
+                  type="number"
+                  id="year"
+                  name="year"
+                  value={resourceFormData.year}
+                  onChange={handleResourceFormChange}
+                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                  required
+                />
+              </div>
+              
+              <div className="mb-4">
+                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="description">
+                  Descrição
+                </label>
+                <textarea
+                  id="description"
+                  name="description"
+                  value={resourceFormData.description}
+                  onChange={handleResourceFormChange}
+                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                  rows="4"
+                />
+              </div>
+              
+              <div className="mb-4">
+                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="url">
+                  URL
+                </label>
+                <input
+                  type="url"
+                  id="url"
+                  name="url"
+                  value={resourceFormData.url}
+                  onChange={handleResourceFormChange}
+                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                  placeholder="https://..."
+                />
+              </div>
+              
+              <div className="mb-4">
+                <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="areas">
+                  Áreas de Pesquisa
+                </label>
+                <input
+                  type="text"
+                  id="areas"
+                  value={resourceFormData.areas.join(', ')}
+                  onChange={handleAreaChange}
+                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                  placeholder="Economia, Gestão, Ciência de Dados, ..."
+                />
+              </div>
+              
+              <div className="flex justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                >
+                  {resourceFormData.id ? 'Guardar Alterações' : 'Adicionar Recurso'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
 
-window.ResourcesView = ResourcesView;
+// Make it available globally
+window.ResourcesViewNew = ResourcesViewNew;

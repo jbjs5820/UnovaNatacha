@@ -128,6 +128,43 @@ Para utilizar todas as funcionalidades, configure:
 3. As interações com a API Gemini são geridas pelo utilitário `geminiApi.js`
 4. As configurações do utilizador são persistidas entre sessões
 
+## Modelos Gemini
+
+A aplicação utiliza a API Gemini para funcionalidades de IA. Os modelos suportados são:
+
+### Modelos Estáveis
+- `gemini-pro`: Modelo principal para geração de texto
+- `gemini-pro-vision`: Modelo para análise de imagens e texto
+- `gemini-1.5-pro`: Modelo Gemini 1.5 Pro
+- `gemini-1.5-flash`: Modelo Gemini 1.5 Flash
+- `gemini-2.0-flash`: Modelo Gemini 2.0 Flash
+
+### Modelos Experimentais
+A aplicação também suporta modelos experimentais da API Gemini:
+- Modelos Preview do Gemini 1.5 (Flash e Pro)
+- Versões experimentais com datas específicas (ex: gemini-1.5-flash-preview-0514)
+
+**Nota**: Os modelos experimentais podem não estar disponíveis no futuro ou apresentar comportamentos inesperados.
+
+### Utilitário ModelUtils
+O utilitário `ModelUtils` gerencia automaticamente os nomes dos modelos, garantindo compatibilidade mesmo quando os nomes dos modelos mudam. Para usar um modelo em seu código:
+
+```javascript
+// Obter o modelo atual (normalizado)
+const model = ModelUtils.getModelFromStorage();
+
+// Normalizar um nome de modelo específico
+const normalizedModel = ModelUtils.normalizeModelName('algum-modelo');
+
+// Salvar um modelo no localStorage (com normalização)
+ModelUtils.saveModelToStorage('gemini-pro');
+
+// Verificar se um modelo é experimental
+const isExperimental = ModelUtils.isExperimentalModel('gemini-1.5-flash-preview-0514');
+```
+
+Este utilitário facilita a manutenção do código quando a Google atualiza os nomes dos modelos Gemini.
+
 ## Integração com Gemini API
 
 A aplicação utiliza a API Gemini para várias funcionalidades de IA:

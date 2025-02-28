@@ -2,7 +2,7 @@
 (function() {
   async function loadEnvFile() {
     try {
-      const response = await fetch('/.env.local');
+      const response = await fetch('.env.local');
       
       if (!response.ok) {
         console.warn('Arquivo .env.local não encontrado. Usando valores padrão.');

@@ -13,9 +13,9 @@ function PaperSearchTab({ resources, setResources, googleApiKey }) {
     setError(null);
     
     try {
-      // Obter a chave API e modelo do localStorage ou do EnvConfig
+      // Obter a chave API e modelo
       const apiKey = localStorage.getItem('geminiApiKey') || googleApiKey || EnvConfig.GEMINI_API_KEY;
-      const model = localStorage.getItem('geminiModel') || EnvConfig.DEFAULT_MODEL;
+      const model = ModelUtils.getModelFromStorage();
       
       // Usar o utilitário GeminiAPI para pesquisar artigos
       const results = await GeminiAPI.searchAcademicPapers(apiKey, searchQuery, { model });

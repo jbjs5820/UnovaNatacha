@@ -23,9 +23,9 @@ function ContentGenerationTab() {
     setError(null);
     
     try {
-      // Obter a chave API e modelo do localStorage ou do EnvConfig
+      // Obter a chave API e modelo
       const apiKey = localStorage.getItem('geminiApiKey') || EnvConfig.GEMINI_API_KEY;
-      const model = localStorage.getItem('geminiModel') || EnvConfig.DEFAULT_MODEL;
+      const model = ModelUtils.getModelFromStorage();
       
       // Usar o utilitário GeminiAPI para gerar conteúdo
       const content = await GeminiAPI.generateAcademicContent(

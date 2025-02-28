@@ -3,14 +3,19 @@ function SettingsView() {
   const [apiKey, setApiKey] = React.useState(localStorage.getItem('geminiApiKey') || EnvConfig.GEMINI_API_KEY);
   const [language, setLanguage] = React.useState(localStorage.getItem('appLanguage') || EnvConfig.DEFAULT_LANGUAGE);
   const [theme, setTheme] = React.useState(localStorage.getItem('appTheme') || EnvConfig.DEFAULT_THEME);
-  const [model, setModel] = React.useState(localStorage.getItem('geminiModel') || EnvConfig.DEFAULT_MODEL);
+  const [model, setModel] = React.useState(ModelUtils.getModelFromStorage());
   const [saveStatus, setSaveStatus] = React.useState('');
 
   const saveSettings = () => {
+    // Normalizar e salvar o modelo
+    const normalizedModel = ModelUtils.saveModelToStorage(model);
+    if (normalizedModel !== model) {
+      setModel(normalizedModel);
+    }
+    
     localStorage.setItem('geminiApiKey', apiKey);
     localStorage.setItem('appLanguage', language);
     localStorage.setItem('appTheme', theme);
-    localStorage.setItem('geminiModel', model);
     
     setSaveStatus('Configurações guardadas com sucesso!');
     setTimeout(() => setSaveStatus(''), 3000);
@@ -28,7 +33,7 @@ function SettingsView() {
       setApiKey(EnvConfig.GEMINI_API_KEY);
       setLanguage(EnvConfig.DEFAULT_LANGUAGE);
       setTheme(EnvConfig.DEFAULT_THEME);
-      setModel(EnvConfig.DEFAULT_MODEL);
+      setModel(ModelUtils.normalizeModelName(EnvConfig.DEFAULT_MODEL));
       
       localStorage.removeItem('geminiApiKey');
       localStorage.removeItem('appLanguage');
@@ -72,17 +77,35 @@ function SettingsView() {
               Modelo Gemini
             </label>
             <select
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
               id="model"
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
               value={model}
               onChange={(e) => setModel(e.target.value)}
             >
-              <option value="gemini-2.0-pro-exp-02-05">Gemini 2.0 Pro</option>
-              <option value="gemini-2.0-flash-thinking-exp-01-21">Gemini 2.0 Flash Thinking</option>
+              <optgroup label="Modelos Estáveis">
+                {ModelUtils.modelCategories.stable.map(modelInfo => (
+                  <option key={modelInfo.id} value={modelInfo.id}>
+                    {modelInfo.name}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="Modelos Experimentais">
+                {ModelUtils.modelCategories.experimental.map(modelInfo => (
+                  <option key={modelInfo.id} value={modelInfo.id}>
+                    {modelInfo.name}
+                  </option>
+                ))}
+              </optgroup>
             </select>
             <p className="text-xs text-gray-500 mt-1">
               Selecione o modelo Gemini a utilizar para as funcionalidades de IA
             </p>
+            {ModelUtils.isExperimentalModel(model) && (
+              <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-2 mt-2 text-xs" role="alert">
+                <p className="font-bold">Atenção: Modelo Experimental</p>
+                <p>Este é um modelo experimental e pode não estar disponível no futuro ou apresentar comportamentos inesperados.</p>
+              </div>
+            )}
           </div>
         </div>
         

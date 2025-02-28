@@ -1,10 +1,9 @@
 // Utilitário para interagir com a API Gemini
 const GeminiAPI = {
-  // Modelos disponíveis
-  availableModels: [
-    "gemini-2.0-pro-exp-02-05",
-    "gemini-2.0-flash-thinking-exp-01-21"
-  ],
+  // Modelos disponíveis (obtidos do ModelUtils)
+  get availableModels() {
+    return ModelUtils.validModels;
+  },
   
   // Função para enviar uma solicitação para a API Gemini
   async generateContent(apiKey, prompt, options = {}) {
@@ -13,16 +12,20 @@ const GeminiAPI = {
     }
 
     const defaultOptions = {
-      model: 'gemini-2.0-pro-exp-02-05',
+      model: ModelUtils.getModelFromStorage(),
       temperature: 0.7,
-      maxOutputTokens: 800,
+      maxOutputTokens: 100000,
       topK: 40,
       topP: 0.95,
     };
 
     const mergedOptions = { ...defaultOptions, ...options };
     
+    // Normalizar o nome do modelo
+    mergedOptions.model = ModelUtils.normalizeModelName(mergedOptions.model);
+    
     try {
+      console.log('Using Gemini model:', mergedOptions.model);
       const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/${mergedOptions.model}:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: {
@@ -70,9 +73,14 @@ const GeminiAPI = {
   // Função para pesquisar artigos acadêmicos usando Gemini
   async searchAcademicPapers(apiKey, query, options = {}) {
     const mergedOptions = { 
-      ...{ model: 'gemini-2.0-pro-exp-02-05' }, 
+      ...{ model: ModelUtils.getModelFromStorage() }, 
       ...options 
     };
+    
+    // Normalizar o nome do modelo
+    mergedOptions.model = ModelUtils.normalizeModelName(mergedOptions.model);
+    
+    console.log('Search papers using model:', mergedOptions.model);
     
     const prompt = `
       Atue como um assistente de pesquisa acadêmica. Preciso de informações sobre artigos científicos relacionados ao seguinte tema:
@@ -124,9 +132,14 @@ const GeminiAPI = {
   // Função para analisar texto usando Gemini
   async analyzeText(apiKey, text, analysisType, options = {}) {
     const mergedOptions = { 
-      ...{ model: 'gemini-2.0-pro-exp-02-05' }, 
+      ...{ model: ModelUtils.getModelFromStorage() }, 
       ...options 
     };
+    
+    // Normalizar o nome do modelo
+    mergedOptions.model = ModelUtils.normalizeModelName(mergedOptions.model);
+    
+    console.log('Analyze text using model:', mergedOptions.model);
     
     let prompt = '';
     
@@ -242,9 +255,14 @@ const GeminiAPI = {
   // Função para gerar conteúdo acadêmico
   async generateAcademicContent(apiKey, prompt, contentType, language = 'pt', options = {}) {
     const mergedOptions = { 
-      ...{ model: 'gemini-2.0-pro-exp-02-05' }, 
+      ...{ model: ModelUtils.getModelFromStorage() }, 
       ...options 
     };
+    
+    // Normalizar o nome do modelo
+    mergedOptions.model = ModelUtils.normalizeModelName(mergedOptions.model);
+    
+    console.log('Generate academic content using model:', mergedOptions.model);
     
     const langPrefix = language === 'pt' ? 'português de Portugal' : 'English';
     
