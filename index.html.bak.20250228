@@ -18,9 +18,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/docx/7.8.2/docx.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   
-  <!-- Supabase Client -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  
   <!-- Babel para JSX -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   
@@ -57,30 +54,45 @@
         localStorage.setItem('phd-resources', JSON.stringify(defaultResources));
       }
     } catch (e) {
-      console.error('Error initializing resources:', e);
+      console.error('Error checking resources:', e);
     }
+    
+    try {
+      // Check if settings exist
+      const savedSettings = localStorage.getItem('phd-settings');
+      if (!savedSettings) {
+        // Initialize default settings
+        const defaultSettings = {
+          theme: 'light',
+          language: 'pt-PT'
+        };
+        localStorage.setItem('phd-settings', JSON.stringify(defaultSettings));
+        console.log('Default settings initialized');
+      }
+    } catch (e) {
+      console.error('Error checking settings:', e);
+    }
+    
+    // Force reset of model in localStorage
+    console.log('Previous model:', localStorage.getItem('geminiModel'));
+    // Model will be normalized by ModelUtils.cleanupOldModels() after it loads
   </script>
-  
-  <!-- Utility Scripts -->
   <script src="js/utils/loadEnv.js"></script>
   <script src="js/utils/envConfig.js"></script>
-  <script src="js/utils/supabaseClient.js"></script>
-  <script src="js/utils/supabaseSchemaSetup.js"></script>
-  <script src="js/utils/supabaseSetup.js"></script>
-  <script src="js/utils/aiInteractionsService.js"></script>
-  <script src="js/utils/aiUtils.js"></script>
   <script src="js/utils/modelUtils.js"></script>
+  <script src="js/utils/supabaseClient.js"></script>
+  <script src="js/utils/supabaseSetup.js"></script>
+  <script src="js/utils/supabaseSchemaSetup.js"></script>
+  <script src="js/utils/aiUtils.js"></script>
+  <script src="js/utils/aiInteractionsService.js"></script>
   <script src="js/utils/geminiApi.js"></script>
   <script type="text/babel" src="js/utils/models.js"></script>
-  
-  <!-- Component Scripts -->
   <script type="text/babel" src="js/components/TasksView.js"></script>
   <script type="text/babel" src="js/components/ProjectsView.js"></script>
   <script type="text/babel" src="js/components/ResourcesView.js"></script>
   <script type="text/babel" src="js/components/ai/PaperSearchTab.js"></script>
   <script type="text/babel" src="js/components/ai/ContentGenerationTab.js"></script>
   <script type="text/babel" src="js/components/ai/TextAnalysisTab.js"></script>
-  <script type="text/babel" src="js/components/ai/AIHistoryView.js"></script>
   <script type="text/babel" src="js/components/ai/AIAssistantView.js"></script>
   <script type="text/babel" src="js/components/ExportView.js"></script>
   <script type="text/babel" src="js/components/BackofficeView.js"></script>
@@ -107,80 +119,186 @@
             if (success) {
               console.log('Supabase inicializado com variáveis de ambiente');
             } else {
-              console.error('Falha ao inicializar Supabase com variáveis de ambiente');
+              console.warn('Falha ao inicializar Supabase com variáveis de ambiente');
             }
-          } else {
-            console.log('Variáveis de ambiente para Supabase não encontradas');
           }
         });
       }, []);
       
-      // Estado para abas e dados
-      const [activeTab, setActiveTab] = React.useState('tasks');
-      const [showHelpModal, setShowHelpModal] = React.useState(false);
-      
-      // Estado para tarefas
+      // Estado para as tarefas
       const [tasks, setTasks] = React.useState(() => {
-        const savedTasks = localStorage.getItem('phd-tasks');
-        return savedTasks ? JSON.parse(savedTasks) : [];
+        try {
+          const savedTasks = localStorage.getItem('phd-tasks');
+          return savedTasks ? JSON.parse(savedTasks) : [];
+        } catch (e) {
+          console.error('Erro ao carregar tarefas:', e);
+          return [];
+        }
       });
       
-      // Estado para projetos
+      // Estado para os projetos
       const [projects, setProjects] = React.useState(() => {
-        const savedProjects = localStorage.getItem('phd-projects');
-        return savedProjects ? JSON.parse(savedProjects) : [];
+        try {
+          const savedProjects = localStorage.getItem('phd-projects');
+          return savedProjects ? JSON.parse(savedProjects) : [];
+        } catch (e) {
+          console.error('Erro ao carregar projetos:', e);
+          return [];
+        }
       });
       
-      // Estado para recursos
-      const [resources, setResources] = React.useState(() => {
-        const savedResources = localStorage.getItem('phd-resources');
-        return savedResources ? JSON.parse(savedResources) : [];
-      });
+      // Estado para os recursos - inicialização defensiva
+      const [resources, setResources] = React.useState([]);
       
-      // Salvar tarefas quando mudam
+      // Carregar recursos de forma segura
       React.useEffect(() => {
-        localStorage.setItem('phd-tasks', JSON.stringify(tasks));
-      }, [tasks]);
+        try {
+          const savedResources = localStorage.getItem('phd-resources');
+          if (savedResources) {
+            try {
+              const parsedResources = JSON.parse(savedResources);
+              if (Array.isArray(parsedResources)) {
+                setResources(parsedResources);
+                console.log('Recursos carregados com sucesso:', parsedResources.length);
+              } else {
+                console.error('Recursos não são um array:', parsedResources);
+                // Definir recursos padrão
+                const defaultResources = [
+                  {
+                    id: 1,
+                    title: 'Exemplo de Recurso',
+                    type: 'Artigo Científico',
+                    author: 'Autor Exemplo',
+                    year: 2023,
+                    description: 'Um exemplo de recurso para demonstração',
+                    url: '',
+                    areas: ['Exemplo'],
+                    relevance: 3,
+                    notes: 'Recurso de exemplo'
+                  }
+                ];
+                setResources(defaultResources);
+                localStorage.setItem('phd-resources', JSON.stringify(defaultResources));
+              }
+            } catch (parseError) {
+              console.error('Erro ao analisar recursos JSON:', parseError);
+              // Definir recursos padrão em caso de erro de análise
+              const defaultResources = [
+                {
+                  id: 1,
+                  title: 'Exemplo de Recurso',
+                  type: 'Artigo Científico',
+                  author: 'Autor Exemplo',
+                  year: 2023,
+                  description: 'Um exemplo de recurso para demonstração',
+                  url: '',
+                  areas: ['Exemplo'],
+                  relevance: 3,
+                  notes: 'Recurso de exemplo'
+                }
+              ];
+              setResources(defaultResources);
+              localStorage.setItem('phd-resources', JSON.stringify(defaultResources));
+            }
+          } else {
+            console.log('Nenhum recurso encontrado no localStorage');
+          }
+        } catch (e) {
+          console.error('Erro ao carregar recursos:', e);
+          // Limpar recursos corrompidos e definir padrão
+          const defaultResources = [
+            {
+              id: 1,
+              title: 'Exemplo de Recurso',
+              type: 'Artigo Científico',
+              author: 'Autor Exemplo',
+              year: 2023,
+              description: 'Um exemplo de recurso para demonstração',
+              url: '',
+              areas: ['Exemplo'],
+              relevance: 3,
+              notes: 'Recurso de exemplo'
+            }
+          ];
+          setResources(defaultResources);
+          try {
+            localStorage.setItem('phd-resources', JSON.stringify(defaultResources));
+          } catch (storageError) {
+            console.error('Erro ao salvar recursos padrão:', storageError);
+          }
+        }
+      }, []);
       
-      // Salvar projetos quando mudam
-      React.useEffect(() => {
-        localStorage.setItem('phd-projects', JSON.stringify(projects));
-      }, [projects]);
-      
-      // Salvar recursos quando mudam
-      React.useEffect(() => {
-        localStorage.setItem('phd-resources', JSON.stringify(resources));
-      }, [resources]);
-      
-      // Configurações do aplicativo
+      // Configurações da aplicação
       const [settings, setSettings] = React.useState(() => {
         const savedSettings = localStorage.getItem('phd-settings');
         return savedSettings ? JSON.parse(savedSettings) : {
           language: EnvConfig.DEFAULT_LANGUAGE,
           theme: EnvConfig.DEFAULT_THEME,
-          googleApiKey: EnvConfig.GOOGLE_API_KEY || '',
-          geminiApiKey: EnvConfig.GEMINI_API_KEY || '',
-          model: EnvConfig.DEFAULT_MODEL || 'gemini-pro',
+          googleApiKey: EnvConfig.GEMINI_API_KEY
         };
       });
+      
+      // Estado para o modal de ajuda
+      const [showHelpModal, setShowHelpModal] = React.useState(false);
+      
+      // Persistir dados quando alterados
+      React.useEffect(() => {
+        localStorage.setItem('phd-tasks', JSON.stringify(tasks));
+      }, [tasks]);
+      
+      React.useEffect(() => {
+        localStorage.setItem('phd-projects', JSON.stringify(projects));
+      }, [projects]);
+      
+      React.useEffect(() => {
+        localStorage.setItem('phd-resources', JSON.stringify(resources));
+      }, [resources]);
+      
+      React.useEffect(() => {
+        localStorage.setItem('phd-settings', JSON.stringify(settings));
+      }, [settings]);
+      
+      // Aplicar tema
+      React.useEffect(() => {
+        if (settings.theme === 'dark') {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      }, [settings.theme]);
+      
+      const [activeTab, setActiveTab] = React.useState('tasks');
       
       return (
         <div className="container mx-auto px-4 py-8">
           <header className="flex justify-between items-center mb-8">
             <h1 className="text-3xl font-bold text-gray-800">Gestor de Trabalhos Académicos PhD</h1>
             <div className="flex space-x-2">
-              <button
-                onClick={() => setShowHelpModal(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-200"
+              <button 
+                onClick={() => setSettings({...settings, theme: settings.theme === 'light' ? 'dark' : 'light'})}
+                className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded"
               >
-                Ajuda Rápida
+                {settings.theme === 'light' ? '🌙' : '☀️'}
+              </button>
+              <button 
+                onClick={() => setSettings({...settings, language: settings.language === 'pt-PT' ? 'en-US' : 'pt-PT'})}
+                className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded"
+              >
+                {settings.language === 'pt-PT' ? '🇬🇧' : '🇵🇹'}
+              </button>
+              <button 
+                onClick={() => setShowHelpModal(true)}
+                className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded"
+              >
+                ❓
               </button>
             </div>
           </header>
           
           <div className="mb-6">
-            <nav className="flex space-x-4 border-b">
-              <button
+            <nav className="flex flex-wrap space-x-1 border-b">
+              <button 
                 onClick={() => setActiveTab('tasks')}
                 className={`py-2 px-4 font-medium ${activeTab === 'tasks' 
                   ? 'border-b-2 border-blue-500 text-blue-600' 
@@ -188,7 +306,7 @@
               >
                 Tarefas
               </button>
-              <button
+              <button 
                 onClick={() => setActiveTab('projects')}
                 className={`py-2 px-4 font-medium ${activeTab === 'projects' 
                   ? 'border-b-2 border-blue-500 text-blue-600' 
@@ -196,7 +314,7 @@
               >
                 Projetos
               </button>
-              <button
+              <button 
                 onClick={() => setActiveTab('resources')}
                 className={`py-2 px-4 font-medium ${activeTab === 'resources' 
                   ? 'border-b-2 border-blue-500 text-blue-600' 
@@ -204,7 +322,7 @@
               >
                 Recursos
               </button>
-              <button
+              <button 
                 onClick={() => setActiveTab('ai')}
                 className={`py-2 px-4 font-medium ${activeTab === 'ai' 
                   ? 'border-b-2 border-blue-500 text-blue-600' 
@@ -212,7 +330,7 @@
               >
                 Assistente IA
               </button>
-              <button
+              <button 
                 onClick={() => setActiveTab('export')}
                 className={`py-2 px-4 font-medium ${activeTab === 'export' 
                   ? 'border-b-2 border-blue-500 text-blue-600' 
@@ -220,15 +338,7 @@
               >
                 Exportar
               </button>
-              <button
-                onClick={() => setActiveTab('backoffice')}
-                className={`py-2 px-4 font-medium ${activeTab === 'backoffice' 
-                  ? 'border-b-2 border-blue-500 text-blue-600' 
-                  : 'text-gray-500 hover:text-gray-700'}`}
-              >
-                Backoffice
-              </button>
-              <button
+              <button 
                 onClick={() => setActiveTab('settings')}
                 className={`py-2 px-4 font-medium ${activeTab === 'settings' 
                   ? 'border-b-2 border-blue-500 text-blue-600' 
@@ -236,7 +346,7 @@
               >
                 Configurações
               </button>
-              <button
+              <button 
                 onClick={() => setActiveTab('help')}
                 className={`py-2 px-4 font-medium ${activeTab === 'help' 
                   ? 'border-b-2 border-blue-500 text-blue-600' 
@@ -248,14 +358,53 @@
           </div>
           
           <main>
-            {activeTab === 'tasks' && <TasksView tasks={tasks} setTasks={setTasks} projects={projects} />}
-            {activeTab === 'projects' && <ProjectsView projects={projects} setProjects={setProjects} tasks={tasks} setTasks={setTasks} />}
-            {activeTab === 'resources' && <ResourcesView resources={resources} setResources={setResources} />}
-            {activeTab === 'ai' && <AIAssistantView resources={resources} setResources={setResources} googleApiKey={settings.googleApiKey} />}
-            {activeTab === 'export' && <ExportView tasks={tasks} projects={projects} resources={resources} />}
-            {activeTab === 'backoffice' && <BackofficeView />}
-            {activeTab === 'settings' && <SettingsView />}
-            {activeTab === 'help' && <HelpView />}
+            {activeTab === 'tasks' && (
+              <TasksView 
+                tasks={tasks} 
+                setTasks={setTasks} 
+                projects={projects}
+              />
+            )}
+            
+            {activeTab === 'projects' && (
+              <ProjectsView 
+                projects={projects} 
+                setProjects={setProjects} 
+                tasks={tasks}
+                setTasks={setTasks}
+              />
+            )}
+            
+            {activeTab === 'resources' && (
+              <ResourcesView 
+                resources={resources} 
+                setResources={setResources}
+              />
+            )}
+            
+            {activeTab === 'ai' && (
+              <AIAssistantView 
+                resources={resources}
+                setResources={setResources}
+                googleApiKey={settings.googleApiKey}
+              />
+            )}
+            
+            {activeTab === 'export' && (
+              <ExportView 
+                tasks={tasks}
+                projects={projects}
+                resources={resources}
+              />
+            )}
+            
+            {activeTab === 'settings' && (
+              <SettingsView />
+            )}
+            
+            {activeTab === 'help' && (
+              <HelpView />
+            )}
           </main>
           
           {/* Modal de Ajuda Rápida */}

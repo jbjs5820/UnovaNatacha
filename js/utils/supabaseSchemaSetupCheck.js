@@ -11,13 +11,14 @@ class SupabaseSchemaSetup {
 
   /**
    * Check if a specific table exists
+   * @param {Object} client - Supabase client
    * @param {String} tableName - Name of the table to check
    * @returns {Promise<Boolean>} - Whether the table exists
    */
-  async tableExists(tableName) {
+  static async tableExists(client, tableName) {
     try {
       // Using information_schema is more reliable than trying to query the table directly
-      const { data, error } = await this.supabase
+      const { data, error } = await client
         .from('information_schema.tables')
         .select('table_name')
         .eq('table_schema', 'public')
@@ -43,10 +44,10 @@ class SupabaseSchemaSetup {
   async checkTablesExist() {
     try {
       const results = {
-        projects: await this.tableExists('projects'),
-        tasks: await this.tableExists('tasks'),
-        documents: await this.tableExists('documents'),
-        ai_interactions: await this.tableExists('ai_interactions')
+        projects: await SupabaseSchemaSetup.tableExists(this.supabase, 'projects'),
+        tasks: await SupabaseSchemaSetup.tableExists(this.supabase, 'tasks'),
+        documents: await SupabaseSchemaSetup.tableExists(this.supabase, 'documents'),
+        ai_interactions: await SupabaseSchemaSetup.tableExists(this.supabase, 'ai_interactions')
       };
       
       return results;

@@ -11,7 +11,7 @@
   <!-- Supabase JS -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   
-  <!-- Custom Scripts -->
+  <script src="js/utils/supabaseSchemaSetup.js"></script>  <!-- Custom Scripts -->
   <script src="js/utils/supabaseClient.js"></script>
   <script src="js/utils/aiInteractionsService.js"></script>
 </head>
@@ -178,7 +178,7 @@
         
         try {
           // Initialize Supabase client
-          SupabaseClient.initialize(supabaseUrl, supabaseKey);
+          SupabaseClient.init(supabaseUrl, supabaseKey);
           
           if (SupabaseClient.isInitialized()) {
             displayResult('Success', 'Supabase client initialized successfully');
@@ -208,26 +208,46 @@
         try {
           displayResult('Working', 'Creating project...');
           
-          const { data, error } = await SupabaseClient.getClient().rpc(
-            'create_project',
-            {
-              p_name: projectName,
-              p_description: projectDescription,
-              p_status: 'active',
-              p_metadata: { source: 'test_page' }
-            }
-          );
+          // First try to use the stored procedure
+          let result;
+          try {
+            result = await SupabaseClient.getClient().rpc(
+              'create_project',
+              {
+                p_name: projectName,
+                p_description: projectDescription,
+                p_status: 'active',
+                p_metadata: { source: 'test_page' }
+              }
+            );
+          } catch (rpcError) {
+            console.warn('RPC error, falling back to direct insert:', rpcError);
+            // If the stored procedure doesn't exist, fall back to direct insert
+            result = await SupabaseClient.getClient()
+              .from('projects')
+              .insert({
+                name: projectName,
+                description: projectDescription,
+                status: 'active',
+                metadata: { source: 'test_page' }
+              })
+              .select('id')
+              .single();
+          }
           
-          if (error) {
-            displayResult('Error', error, true);
+          if (result.error) {
+            displayResult('Error', result.error, true);
             return;
           }
           
-          displayResult('Success', { project_id: data, message: 'Project created successfully' });
+          // Get the project ID (different depending on which method worked)
+          const projectId = result.data?.id || result.data;
+          
+          displayResult('Success', { project_id: projectId, message: 'Project created successfully' });
           
           // Set the project ID for the interaction
-          document.getElementById('projectId').value = data;
-          document.getElementById('viewProjectId').value = data;
+          document.getElementById('projectId').value = projectId;
+          document.getElementById('viewProjectId').value = projectId;
         } catch (error) {
           displayResult('Error', error.message, true);
         }
