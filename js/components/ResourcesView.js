@@ -1,5 +1,5 @@
-// Enhanced ResourcesViewNew component with full functionality
-const ResourcesViewNew = ({ resources, setResources }) => {
+// Enhanced ResourcesView component with full functionality
+const ResourcesView = ({ resources, setResources }) => {
   // State management
   const [resourceFormData, setResourceFormData] = React.useState({
     title: '',
@@ -446,4 +446,4 @@ const ResourcesViewNew = ({ resources, setResources }) => {
 };
 
 // Make it available globally
-window.ResourcesViewNew = ResourcesViewNew;
+window.ResourcesView = ResourcesView;

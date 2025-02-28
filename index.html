@@ -30,37 +30,47 @@
   
   <!-- Importar componentes -->
   <script>
-    // Debug localStorage
-    console.log('DEBUG localStorage:');
-    console.log('phd-resources:', localStorage.getItem('phd-resources'));
-    
-    // Force clear resources to fix the issue
-    console.log('Forcing clear of resources in localStorage');
-    localStorage.removeItem('phd-resources');
-    
-    // Add default resources
-    const defaultDebugResources = [
-      {
-        id: 1,
-        title: 'Exemplo de Recurso',
-        type: 'Artigo Científico',
-        author: 'Autor Exemplo',
-        year: 2023
-      }
-    ];
-    localStorage.setItem('phd-resources', JSON.stringify(defaultDebugResources));
-    console.log('Added default resources to localStorage');
-    
+    // Initialize resources if needed
     try {
       const savedResources = localStorage.getItem('phd-resources');
       if (savedResources) {
-        console.log('Parsed resources:', JSON.parse(savedResources));
+        console.log('Resources found in localStorage');
+      } else {
+        console.log('No resources found, initializing defaults');
+        const defaultResources = [
+          {
+            id: 1,
+            title: 'Exemplo de Recurso',
+            type: 'Artigo Científico',
+            author: 'Autor Exemplo',
+            year: 2023,
+            description: 'Um exemplo de recurso para demonstração',
+            url: '',
+            areas: ['Exemplo'],
+            relevance: 3,
+            notes: 'Recurso de exemplo'
+          }
+        ];
+        localStorage.setItem('phd-resources', JSON.stringify(defaultResources));
       }
     } catch (e) {
-      console.error('Error parsing resources:', e);
-      // Clear corrupted resources
-      console.log('Clearing corrupted resources from localStorage');
-      localStorage.removeItem('phd-resources');
+      console.error('Error checking resources:', e);
+    }
+    
+    try {
+      // Check if settings exist
+      const savedSettings = localStorage.getItem('phd-settings');
+      if (!savedSettings) {
+        // Initialize default settings
+        const defaultSettings = {
+          theme: 'light',
+          language: 'pt-PT'
+        };
+        localStorage.setItem('phd-settings', JSON.stringify(defaultSettings));
+        console.log('Default settings initialized');
+      }
+    } catch (e) {
+      console.error('Error checking settings:', e);
     }
     
     // Force reset of model in localStorage
@@ -126,20 +136,46 @@
         try {
           const savedResources = localStorage.getItem('phd-resources');
           if (savedResources) {
-            const parsedResources = JSON.parse(savedResources);
-            if (Array.isArray(parsedResources)) {
-              setResources(parsedResources);
-              console.log('Recursos carregados com sucesso:', parsedResources.length);
-            } else {
-              console.error('Recursos não são um array:', parsedResources);
-              // Definir recursos padrão
+            try {
+              const parsedResources = JSON.parse(savedResources);
+              if (Array.isArray(parsedResources)) {
+                setResources(parsedResources);
+                console.log('Recursos carregados com sucesso:', parsedResources.length);
+              } else {
+                console.error('Recursos não são um array:', parsedResources);
+                // Definir recursos padrão
+                const defaultResources = [
+                  {
+                    id: 1,
+                    title: 'Exemplo de Recurso',
+                    type: 'Artigo Científico',
+                    author: 'Autor Exemplo',
+                    year: 2023,
+                    description: 'Um exemplo de recurso para demonstração',
+                    url: '',
+                    areas: ['Exemplo'],
+                    relevance: 3,
+                    notes: 'Recurso de exemplo'
+                  }
+                ];
+                setResources(defaultResources);
+                localStorage.setItem('phd-resources', JSON.stringify(defaultResources));
+              }
+            } catch (parseError) {
+              console.error('Erro ao analisar recursos JSON:', parseError);
+              // Definir recursos padrão em caso de erro de análise
               const defaultResources = [
                 {
                   id: 1,
                   title: 'Exemplo de Recurso',
                   type: 'Artigo Científico',
                   author: 'Autor Exemplo',
-                  year: 2023
+                  year: 2023,
+                  description: 'Um exemplo de recurso para demonstração',
+                  url: '',
+                  areas: ['Exemplo'],
+                  relevance: 3,
+                  notes: 'Recurso de exemplo'
                 }
               ];
               setResources(defaultResources);
@@ -150,8 +186,27 @@
           }
         } catch (e) {
           console.error('Erro ao carregar recursos:', e);
-          // Limpar recursos corrompidos
-          localStorage.removeItem('phd-resources');
+          // Limpar recursos corrompidos e definir padrão
+          const defaultResources = [
+            {
+              id: 1,
+              title: 'Exemplo de Recurso',
+              type: 'Artigo Científico',
+              author: 'Autor Exemplo',
+              year: 2023,
+              description: 'Um exemplo de recurso para demonstração',
+              url: '',
+              areas: ['Exemplo'],
+              relevance: 3,
+              notes: 'Recurso de exemplo'
+            }
+          ];
+          setResources(defaultResources);
+          try {
+            localStorage.setItem('phd-resources', JSON.stringify(defaultResources));
+          } catch (storageError) {
+            console.error('Erro ao salvar recursos padrão:', storageError);
+          }
         }
       }, []);
       
