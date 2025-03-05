@@ -1,6 +1,61 @@
 // Componente de visualização e gestão de projetos
 const ProjectsView = ({ projects, setProjects }) => {
   const [projectFormData, setProjectFormData] = React.useState(createProjectModel());
+  const [isEditing, setIsEditing] = React.useState(false);
+  const [editProjectId, setEditProjectId] = React.useState(null);
+  
+  // Add event listeners when component mounts
+  React.useEffect(() => {
+    console.log('ProjectsView component mounted');
+    
+    // Add direct click handlers to edit buttons
+    const addEditButtonHandlers = () => {
+      const editButtons = document.querySelectorAll('.project-edit-button');
+      console.log('Found project edit buttons:', editButtons.length);
+      
+      editButtons.forEach(button => {
+        const projectId = button.getAttribute('data-project-id');
+        if (projectId) {
+          button.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Edit button clicked for project ID:', projectId);
+            const project = projects.find(p => p.id == projectId);
+            if (project) {
+              startEditProject(project);
+            }
+          });
+        }
+      });
+    };
+    
+    // Run after a short delay to ensure DOM is ready
+    setTimeout(addEditButtonHandlers, 500);
+    
+    // Clean up
+    return () => {
+      console.log('ProjectsView component unmounting');
+    };
+  }, [projects]); // Re-run when projects change
+  
+  // Store component reference in window object for global access
+  React.useEffect(() => {
+    console.log('Storing ProjectsView component reference with', projects.length, 'projects');
+    
+    // Store a reference to the component in the window object
+    window.currentProjectsComponent = {
+      projects: projects,
+      startEditProject: (project) => {
+        console.log('startEditProject called from global reference with project:', project);
+        startEditProject(project);
+      }
+    };
+    
+    // Cleanup function to remove the reference when component unmounts
+    return () => {
+      window.currentProjectsComponent = null;
+    };
+  }, [projects]); // Re-run when projects change
   
   // Handle changes to the project form
   const handleProjectFormChange = (e) => {
@@ -26,6 +81,46 @@ const ProjectsView = ({ projects, setProjects }) => {
     document.getElementById('addProjectModal').classList.add('hidden');
   };
   
+  // Edit a project
+  const editProject = (e) => {
+    e.preventDefault();
+    const updatedProjects = projects.map(project => 
+      project.id === editProjectId ? { 
+        ...projectFormData, 
+        id: editProjectId,
+        members: typeof projectFormData.members === 'string' 
+                ? projectFormData.members.split(',').map(member => member.trim()) 
+                : projectFormData.members
+      } : project
+    );
+    setProjects(updatedProjects);
+    setProjectFormData(createProjectModel());
+    setIsEditing(false);
+    setEditProjectId(null);
+    document.getElementById('addProjectModal').classList.add('hidden');
+  };
+  
+  // Start editing a project
+  const startEditProject = (project) => {
+    console.log('startEditProject called with project:', project);
+    
+    try {
+      setIsEditing(true);
+      setEditProjectId(project.id);
+      setProjectFormData({ ...project });
+      
+      const modal = document.getElementById('addProjectModal');
+      if (modal) {
+        console.log('Found project modal, removing hidden class');
+        modal.classList.remove('hidden');
+      } else {
+        console.error('Project modal element not found: addProjectModal');
+      }
+    } catch (error) {
+      console.error('Error in startEditProject:', error);
+    }
+  };
+  
   // Delete a project
   const deleteProject = (id) => {
     if (confirm('Tem a certeza que pretende eliminar este projeto?')) {
@@ -36,10 +131,19 @@ const ProjectsView = ({ projects, setProjects }) => {
   // Modal toggle
   const toggleProjectModal = (show) => {
     const modal = document.getElementById('addProjectModal');
+    if (!modal) {
+      console.error('Modal element not found: addProjectModal');
+      return;
+    }
+    
     if (show) {
       modal.classList.remove('hidden');
     } else {
       modal.classList.add('hidden');
+      // Reset form when closing
+      setProjectFormData(createProjectModel());
+      setIsEditing(false);
+      setEditProjectId(null);
     }
   };
   
@@ -82,12 +186,22 @@ const ProjectsView = ({ projects, setProjects }) => {
                   </svg>
                 </button>
                 <button 
-                  onClick={() => {
-                    // Modal para editar
+                  className="text-blue-600 hover:text-blue-800 transition-colors duration-200 cursor-pointer project-edit-button"
+                  title="Editar projeto"
+                  data-project-id={project.id}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Edit button clicked directly for project ID:', project.id);
+                    startEditProject(project);
                   }}
-                  className="text-gray-400 hover:text-gray-600"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    className="h-5 w-5 pointer-events-none" 
+                    viewBox="0 0 20 20" 
+                    fill="currentColor"
+                  >
                     <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
                   </svg>
                 </button>
@@ -149,8 +263,8 @@ const ProjectsView = ({ projects, setProjects }) => {
       {/* Modal para adicionar novo projeto */}
       <div id="addProjectModal" className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
         <div className="bg-white rounded-lg p-6 max-w-md w-full">
-          <h2 className="text-xl font-bold mb-4">Adicionar Novo Projeto</h2>
-          <form onSubmit={addProject}>
+          <h2 className="text-xl font-bold mb-4">{isEditing ? 'Editar Projeto' : 'Adicionar Novo Projeto'}</h2>
+          <form onSubmit={isEditing ? editProject : addProject}>
             <div className="mb-4">
               <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="name">
                 Nome do Projeto

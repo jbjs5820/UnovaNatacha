@@ -320,5 +320,84 @@
     const root = ReactDOM.createRoot(document.getElementById('app-root'));
     root.render(<App />);
   </script>
+  
+  <!-- Global handlers for edit buttons -->
+  <script>
+    // Global handler for edit buttons
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('Setting up global edit button handlers');
+      
+      // Add click event listener to the document
+      document.addEventListener('click', function(e) {
+        console.log('Document click detected on:', e.target.tagName, e.target);
+        
+        // Check if the click was on a task edit button or its child
+        let target = e.target;
+        
+        // Special handling for SVG elements
+        if (target.tagName === 'svg' || target.tagName === 'path') {
+          console.log('SVG or path element clicked');
+          // Find the closest button parent
+          let button = target;
+          while (button && button.tagName !== 'BUTTON') {
+            button = button.parentElement;
+          }
+          
+          if (button) {
+            console.log('Found button parent:', button);
+            target = button;
+          }
+        }
+        
+        while (target != null) {
+          if (target.classList && (target.classList.contains('task-edit-button') || target.classList.contains('project-edit-button'))) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            console.log('Edit button clicked:', target);
+            
+            // Get the task/project ID
+            const taskId = target.getAttribute('data-task-id');
+            const projectId = target.getAttribute('data-project-id');
+            
+            if (taskId) {
+              console.log('Task edit button clicked for ID:', taskId);
+              // Find the task in the current tasks array
+              const tasksComponent = window.currentTasksComponent;
+              if (tasksComponent && tasksComponent.tasks) {
+                const task = tasksComponent.tasks.find(t => t.id == taskId);
+                if (task && tasksComponent.startEditTask) {
+                  console.log('Calling startEditTask with task:', task);
+                  tasksComponent.startEditTask(task);
+                } else {
+                  console.error('Task not found or startEditTask not available', taskId, tasksComponent);
+                }
+              } else {
+                console.error('TasksComponent not available in window', window.currentTasksComponent);
+              }
+            } else if (projectId) {
+              console.log('Project edit button clicked for ID:', projectId);
+              // Find the project in the current projects array
+              const projectsComponent = window.currentProjectsComponent;
+              if (projectsComponent && projectsComponent.projects) {
+                const project = projectsComponent.projects.find(p => p.id == projectId);
+                if (project && projectsComponent.startEditProject) {
+                  console.log('Calling startEditProject with project:', project);
+                  projectsComponent.startEditProject(project);
+                } else {
+                  console.error('Project not found or startEditProject not available', projectId, projectsComponent);
+                }
+              } else {
+                console.error('ProjectsComponent not available in window', window.currentProjectsComponent);
+              }
+            }
+            
+            break;
+          }
+          target = target.parentElement;
+        }
+      });
+    });
+  </script>
 </body>
 </html>

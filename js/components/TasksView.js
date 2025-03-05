@@ -1,6 +1,61 @@
 // Componente de Visualização de Tarefas
 const TasksView = ({ tasks, setTasks }) => {
   const [taskFormData, setTaskFormData] = React.useState(createTaskModel());
+  const [isEditing, setIsEditing] = React.useState(false);
+  const [editTaskId, setEditTaskId] = React.useState(null);
+  
+  // Add event listeners when component mounts
+  React.useEffect(() => {
+    console.log('TasksView component mounted');
+    
+    // Add direct click handlers to edit buttons
+    const addEditButtonHandlers = () => {
+      const editButtons = document.querySelectorAll('.task-edit-button');
+      console.log('Found edit buttons:', editButtons.length);
+      
+      editButtons.forEach(button => {
+        const taskId = button.getAttribute('data-task-id');
+        if (taskId) {
+          button.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Edit button clicked for task ID:', taskId);
+            const task = tasks.find(t => t.id == taskId);
+            if (task) {
+              startEditTask(task);
+            }
+          });
+        }
+      });
+    };
+    
+    // Run after a short delay to ensure DOM is ready
+    setTimeout(addEditButtonHandlers, 500);
+    
+    // Clean up
+    return () => {
+      console.log('TasksView component unmounting');
+    };
+  }, [tasks]); // Re-run when tasks change
+  
+  // Store component reference in window object for global access
+  React.useEffect(() => {
+    console.log('Storing TasksView component reference with', tasks.length, 'tasks');
+    
+    // Store a reference to the component in the window object
+    window.currentTasksComponent = {
+      tasks: tasks,
+      startEditTask: (task) => {
+        console.log('startEditTask called from global reference with task:', task);
+        startEditTask(task);
+      }
+    };
+    
+    // Cleanup function to remove the reference when component unmounts
+    return () => {
+      window.currentTasksComponent = null;
+    };
+  }, [tasks]); // Re-run when tasks change
   
   // Handle changes to the task form
   const handleTaskFormChange = (e) => {
@@ -14,9 +69,60 @@ const TasksView = ({ tasks, setTasks }) => {
   // Add a new task
   const addTask = (e) => {
     e.preventDefault();
-    setTasks([...tasks, { ...taskFormData, id: Date.now() }]);
+    const newTask = { ...taskFormData, id: Date.now() };
+    setTasks([...tasks, newTask]);
     setTaskFormData(createTaskModel());
     document.getElementById('addTaskModal').classList.add('hidden');
+  };
+  
+  // Edit a task
+  const editTask = (e) => {
+    e.preventDefault();
+    
+    // Update the task in the tasks array
+    const updatedTasks = tasks.map(task => 
+      task.id === editTaskId ? { ...taskFormData, id: editTaskId } : task
+    );
+    
+    // Update state
+    setTasks(updatedTasks);
+    setTaskFormData(createTaskModel());
+    setIsEditing(false);
+    setEditTaskId(null);
+    
+    // Close the modal
+    const modal = document.getElementById('addTaskModal');
+    if (modal) {
+      modal.classList.add('hidden');
+    }
+    
+    // Log for debugging
+    console.log('Task updated:', taskFormData);
+  };
+  
+  // Start editing a task
+  const startEditTask = (task) => {
+    console.log('startEditTask called with task:', task);
+    
+    try {
+      // Set editing state
+      setIsEditing(true);
+      setEditTaskId(task.id);
+      setTaskFormData({ ...task });
+      
+      // Get the modal element
+      const modal = document.getElementById('addTaskModal');
+      
+      // Make sure the modal exists and is visible
+      if (modal) {
+        console.log('Found modal, removing hidden class');
+        modal.classList.remove('hidden');
+      } else {
+        console.error('Modal element not found: addTaskModal');
+      }
+    } catch (error) {
+      console.error('Error in startEditTask:', error);
+    }
   };
   
   // Update task status
@@ -43,10 +149,19 @@ const TasksView = ({ tasks, setTasks }) => {
   // Modal toggle
   const toggleTaskModal = (show) => {
     const modal = document.getElementById('addTaskModal');
+    if (!modal) {
+      console.error('Modal element not found: addTaskModal');
+      return;
+    }
+    
     if (show) {
       modal.classList.remove('hidden');
     } else {
       modal.classList.add('hidden');
+      // Reset form when closing
+      setTaskFormData(createTaskModel());
+      setIsEditing(false);
+      setEditTaskId(null);
     }
   };
   
@@ -97,12 +212,22 @@ const TasksView = ({ tasks, setTasks }) => {
               <h3 className="font-bold text-gray-800">{task.title}</h3>
               <div className="flex space-x-2">
                 <button 
-                  onClick={() => {
-                    // Modal para editar
+                  className="text-blue-600 hover:text-blue-800 transition-colors duration-200 cursor-pointer task-edit-button"
+                  title="Editar tarefa"
+                  data-task-id={task.id}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Edit button clicked directly for task ID:', task.id);
+                    startEditTask(task);
                   }}
-                  className="text-gray-400 hover:text-gray-600"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <svg 
+                    xmlns="http://www.w3.org/2000/svg" 
+                    className="h-5 w-5 pointer-events-none" 
+                    viewBox="0 0 20 20" 
+                    fill="currentColor"
+                  >
                     <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
                   </svg>
                 </button>
@@ -190,11 +315,11 @@ const TasksView = ({ tasks, setTasks }) => {
         ))}
       </div>
       
-      {/* Modal para adicionar nova tarefa */}
+      {/* Modal para adicionar/editar tarefa */}
       <div id="addTaskModal" className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
         <div className="bg-white rounded-lg p-6 max-w-md w-full">
-          <h2 className="text-xl font-bold mb-4">Adicionar Nova Tarefa</h2>
-          <form onSubmit={addTask}>
+          <h2 className="text-xl font-bold mb-4">{isEditing ? 'Editar Tarefa' : 'Adicionar Nova Tarefa'}</h2>
+          <form onSubmit={isEditing ? editTask : addTask}>
             <div className="mb-4">
               <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="title">
                 Título
@@ -305,8 +430,25 @@ const TasksView = ({ tasks, setTasks }) => {
                   <option value="Escrita">Escrita</option>
                   <option value="Revisão">Revisão</option>
                   <option value="Apresentação">Apresentação</option>
+                  <option value="Média">Média</option>
                 </select>
               </div>
+            </div>
+            
+            <div className="mb-4">
+              <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="progress">
+                Progresso: {taskFormData.progress}%
+              </label>
+              <input
+                type="range"
+                id="progress"
+                name="progress"
+                min="0"
+                max="100"
+                value={taskFormData.progress}
+                onChange={handleTaskFormChange}
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+              />
             </div>
             
             <div className="flex items-center justify-between">
@@ -314,7 +456,7 @@ const TasksView = ({ tasks, setTasks }) => {
                 type="submit"
                 className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline transition duration-200"
               >
-                Guardar
+                {isEditing ? 'Atualizar' : 'Guardar'}
               </button>
               <button
                 type="button"
