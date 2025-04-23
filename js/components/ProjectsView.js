@@ -1,4 +1,4 @@
-// Componente de visualização e gestão de projetos
+  // Componente de visualização e gestão de projetos
 const ProjectsView = ({ projects, setProjects }) => {
   const [projectFormData, setProjectFormData] = React.useState(createProjectModel());
   const [isEditing, setIsEditing] = React.useState(false);

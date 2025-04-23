@@ -125,6 +125,91 @@ function ExportView({ tasks, projects, resources }) {
     doc.save("phd-research-report.pdf");
   };
 
+  // Exportar para Word
+  const exportWord = async () => {
+    const title = 'Academic Project Export';
+    const options = {
+      title: title,
+      filename: `${title.toLowerCase().replace(/\s+/g, '-')}.docx`
+    };
+    
+    try {
+      const data = { tasks, projects, resources };
+      const result = await window.WordExportService.exportToWord(data, options);
+      
+      if (result.error) {
+        showNotification('Error exporting to Word: ' + result.error.message, 'error');
+      } else {
+        showNotification('Successfully exported to Word', 'success');
+      }
+    } catch (error) {
+      console.error('Error during Word export:', error);
+      showNotification('Error exporting to Word', 'error');
+    }
+  };
+
+  // Add Word export option to the export view
+  const exportFormatSelect = document.getElementById('export-format');
+  if (exportFormatSelect) {
+    // Check if the Word option already exists
+    if (!Array.from(exportFormatSelect.options).some(option => option.value === 'word')) {
+      const wordOption = document.createElement('option');
+      wordOption.value = 'word';
+      wordOption.textContent = 'Microsoft Word (.docx)';
+      exportFormatSelect.appendChild(wordOption);
+    }
+  }
+
+  // Update the export function to handle Word format
+  async function exportData() {
+    const format = document.getElementById('export-format').value;
+    const includeProjects = document.getElementById('include-projects').checked;
+    const includeTasks = document.getElementById('include-tasks').checked;
+    const includeResources = document.getElementById('include-resources').checked;
+    
+    // Gather data to export
+    const data = {};
+    
+    if (includeProjects) {
+      data.projects = window.ProjectsView.getProjects();
+    }
+    
+    if (includeTasks) {
+      data.tasks = window.TasksView.getTasks();
+    }
+    
+    if (includeResources) {
+      data.resources = window.ResourcesView.getResources();
+    }
+    
+    // Export based on selected format
+    if (format === 'json') {
+      // Existing JSON export code...
+    } else if (format === 'pdf') {
+      // Existing PDF export code...
+    } else if (format === 'word') {
+      // New Word export code
+      const title = document.getElementById('export-title').value || 'Academic Project Export';
+      const options = {
+        title: title,
+        filename: `${title.toLowerCase().replace(/\s+/g, '-')}.docx`
+      };
+      
+      try {
+        const result = await window.WordExportService.exportToWord(data, options);
+        
+        if (result.error) {
+          showNotification('Error exporting to Word: ' + result.error.message, 'error');
+        } else {
+          showNotification('Successfully exported to Word', 'success');
+        }
+      } catch (error) {
+        console.error('Error during Word export:', error);
+        showNotification('Error exporting to Word', 'error');
+      }
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -150,6 +235,13 @@ function ExportView({ tasks, projects, resources }) {
             className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded focus:outline-none focus:shadow-outline transition duration-200"
           >
             Exportar para PDF
+          </button>
+          
+          <button
+            onClick={exportWord}
+            className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded focus:outline-none focus:shadow-outline transition duration-200"
+          >
+            Exportar para Word
           </button>
         </div>
       </div>
